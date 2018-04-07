@@ -13,6 +13,7 @@
 #include "boost/iterator/counting_iterator.hpp"
 
 #include "caffe/util/bbox_util.hpp"
+#define pi 3.1415926535898
 
 namespace caffe {
 
@@ -197,7 +198,7 @@ template double BBoxSize(const double* bbox, const bool normalized);
 
 template <typename Dtype>
 Dtype PBoxSize(const Dtype* pbox, const bool normalized) {
-	
+
   Dtype ltx, lty, rbx, rby, lbx, lby, rtx,rty;
     ltx = pbox[0]; lty = pbox[1];
     rbx = pbox[4]; rby = pbox[5];
@@ -236,8 +237,8 @@ Dtype PBoxSize(const Dtype* pbox, const bool normalized) {
   }
 }
 
-template float PBoxSize(const float* pbox, const bool normalized); 
-template double PBoxSize(const double* pbox, const bool normalized); 
+template float PBoxSize(const float* pbox, const bool normalized);
+template double PBoxSize(const double* pbox, const bool normalized);
 
 void ClipBBox(const NormalizedBBox& bbox, NormalizedBBox* clip_bbox) {
   clip_bbox->set_xmin(std::max(std::min(bbox.xmin(), 1.f), 0.f));
@@ -730,6 +731,7 @@ float JaccardOverlapPbox(const NormalizedPBox& pbox1, const NormalizedPBox& pbox
 
 		}
 	}*/
+	if(PBoxSize(pbox1)==0.f || PBoxSize(pbox2)==0.f) return 0.f;
 	float d1, d2, d3, d4;
 	d1 = sqrt((pow((pbox1.ltopx() - pbox2.ltopx()), 2.f) + pow((pbox1.ltopy() - pbox2.ltopy()), 2.f)));
 	d2 = sqrt((pow((pbox1.lbottomx() - pbox2.lbottomx()), 2.f) + pow((pbox1.lbottomy() - pbox2.lbottomy()), 2.f)));
@@ -739,16 +741,18 @@ float JaccardOverlapPbox(const NormalizedPBox& pbox1, const NormalizedPBox& pbox
 	float d = std::max(std::max(std::max(d1, d2), d3), d4);
 	//LOG(INFO) << "d: " << d;
 
-	d1 = sqrt((pow((pbox1.ltopx() - pbox1.lbottomx()), 2.f) + pow((pbox1.ltopy() - pbox1.lbottomy()), 2.f)));
-	d2 = sqrt((pow((pbox1.lbottomx() - pbox1.rbottomx()), 2.f) + pow((pbox1.lbottomy() - pbox1.rbottomy()), 2.f)));
-	d3 = sqrt((pow((pbox1.rbottomx() - pbox1.rtopx()), 2.f) + pow((pbox1.rbottomy() - pbox1.rtopy()), 2.f)));
-	d4 = sqrt((pow((pbox1.rtopx() - pbox1.ltopx()), 2.f) + pow((pbox1.rtopy() - pbox1.ltopy()), 2.f)));
+	// d1 = sqrt((pow((pbox1.ltopx() - pbox1.lbottomx()), 2.f) + pow((pbox1.ltopy() - pbox1.lbottomy()), 2.f)));
+	// d2 = sqrt((pow((pbox1.lbottomx() - pbox1.rbottomx()), 2.f) + pow((pbox1.lbottomy() - pbox1.rbottomy()), 2.f)));
+	// d3 = sqrt((pow((pbox1.rbottomx() - pbox1.rtopx()), 2.f) + pow((pbox1.rbottomy() - pbox1.rtopy()), 2.f)));
+	// d4 = sqrt((pow((pbox1.rtopx() - pbox1.ltopx()), 2.f) + pow((pbox1.rtopy() - pbox1.ltopy()), 2.f)));
 
-	float D = std::min(std::min(std::min(d1, d2), d3), d4);
-	//LOG(INFO) << d1 << " " << d2 << " " << d3 << " " << d4;
-	//LOG(INFO) << "D: " << D; 
+	// float D = std::min(std::min(std::min(d1, d2), d3), d4);
+	// //LOG(INFO) << d1 << " " << d2 << " " << d3 << " " << d4;
+	//LOG(INFO) << "D: " << D;
 
-	return 1.f - expf(-D / d);
+//	return 1.f - expf(-D / d);
+	if(d>1.f) return 0.f;
+	return 1.f - d;
 	/*float intersect_width, intersect_height;
 	if (normalized) {
 		intersect_width = intersect_bbox.xmax() - intersect_bbox.xmin();
@@ -1014,39 +1018,163 @@ void EncodePBox(const NormalizedPBox& prior_pbox,
 				(bbox.ymax() - prior_bbox.ymax()) / prior_variance[3]);*/
 		}
 	}
-	//else if (code_type == PriorBoxParameter_CodeType_CENTER_SIZE) {
-	//	float prior_width = prior_bbox.xmax() - prior_bbox.xmin();
-	//	CHECK_GT(prior_width, 0);
-	//	float prior_height = prior_bbox.ymax() - prior_bbox.ymin();
-	//	CHECK_GT(prior_height, 0);
-	//	float prior_center_x = (prior_bbox.xmin() + prior_bbox.xmax()) / 2.;
-	//	float prior_center_y = (prior_bbox.ymin() + prior_bbox.ymax()) / 2.;
+	else if (code_type == PriorPBoxParameter_CodeType_CENTER_SIZE_ANGLE) {
+		float prior_dlt, prior_dlb, prior_drb, prior_drt;
+		float prior_center_x, prior_center_y;
+		float prior_alpha, prior_beta;
+			float ltrbx = prior_pbox.ltopx() - prior_pbox.rbottomx();
+			float ltrby = prior_pbox.ltopy() - prior_pbox.rbottomy();
+			float lbrtx = prior_pbox.rtopx() - prior_pbox.lbottomx();
+			float lbrty = prior_pbox.rtopy() - prior_pbox.lbottomy();
+			//float width = bbox.xmax() - bbox.xmin();
+			//float height = bbox.ymax() - bbox.ymin();
+				float prior_ltrb = sqrtf(powf(ltrbx, 2.) + powf(ltrby, 2.));
+				float prior_lbrt = sqrtf(powf(lbrtx, 2.) + powf(lbrty, 2.));
+				prior_alpha = atan2f(lbrtx, lbrty) -  atan2f(-ltrbx, -ltrby);
+		NormalizedPBox p;
+		p.set_ltopx(prior_pbox.ltopx());
+		p.set_ltopy(prior_pbox.ltopy());
+		p.set_lbottomx(prior_pbox.lbottomx());
+		p.set_lbottomy(prior_pbox.lbottomy());
+		p.set_rbottomx(prior_pbox.lbottomx());
+		p.set_rbottomy(prior_pbox.lbottomy());
+		p.set_rtopx(prior_pbox.rtopx());
+		p.set_rtopy(prior_pbox.rtopy());
+		float area1, area2;
+		area1 = PBoxSize(p);
+		p.set_ltopx(prior_pbox.rtopx());
+		p.set_ltopy(prior_pbox.rtopy());
+	  p.set_rbottomx(prior_pbox.rbottomx());
+		p.set_rbottomy(prior_pbox.rbottomy());
+		area2 = PBoxSize(p);
+		float k = area2 / area1;
 
-	//	float bbox_width = bbox.xmax() - bbox.xmin();
-	//	CHECK_GT(bbox_width, 0);
-	//	float bbox_height = bbox.ymax() - bbox.ymin();
-	//	CHECK_GT(bbox_height, 0);
-	//	float bbox_center_x = (bbox.xmin() + bbox.xmax()) / 2.;
-	//	float bbox_center_y = (bbox.ymin() + bbox.ymax()) / 2.;
+		prior_center_x = prior_pbox.ltopx() + (prior_pbox.rbottomx()-prior_pbox.ltopx()) /(1+k);
+		prior_center_y = prior_pbox.ltopy() + (prior_pbox.rbottomy()-prior_pbox.ltopy()) /(1+k);
 
-	//	if (encode_variance_in_target) {
-	//		encode_bbox->set_xmin((bbox_center_x - prior_center_x) / prior_width);
-	//		encode_bbox->set_ymin((bbox_center_y - prior_center_y) / prior_height);
-	//		encode_bbox->set_xmax(log(bbox_width / prior_width));
-	//		encode_bbox->set_ymax(log(bbox_height / prior_height));
-	//	}
-	//	else {
-	//		// Encode variance in bbox.
-	//		encode_bbox->set_xmin(
-	//			(bbox_center_x - prior_center_x) / prior_width / prior_variance[0]);
-	//		encode_bbox->set_ymin(
-	//			(bbox_center_y - prior_center_y) / prior_height / prior_variance[1]);
-	//		encode_bbox->set_xmax(
-	//			log(bbox_width / prior_width) / prior_variance[2]);
-	//		encode_bbox->set_ymax(
-	//			log(bbox_height / prior_height) / prior_variance[3]);
-	//	}
-	//}
+		vector<float> prior_points = {prior_center_x, prior_center_y,
+																prior_pbox.ltopx(), prior_pbox.ltopy(),
+																prior_pbox.lbottomx(), prior_pbox.lbottomy(),
+																prior_pbox.rbottomx(), prior_pbox.rbottomy(),
+																prior_pbox.rtopx(), prior_pbox.rtopy()};
+
+		prior_dlt = P2PDistance(prior_points[0],prior_points[1],prior_points[2],prior_points[3] );
+		prior_dlb = P2PDistance(prior_points[0],prior_points[1],prior_points[4],prior_points[5] );
+		prior_drb = P2PDistance(prior_points[0],prior_points[1],prior_points[6],prior_points[7] );
+		prior_drt = P2PDistance(prior_points[0],prior_points[1],prior_points[8],prior_points[9] );
+		CHECK_GT(prior_dlt,0);
+		CHECK_GT(prior_dlb,0);
+		CHECK_GT(prior_drb,0);
+		CHECK_GT(prior_drt,0);
+
+// beta (-pi, pi)
+		prior_beta = atan2f((prior_pbox.rtopy()-prior_center_y), (prior_pbox.rtopx()-prior_center_x));
+
+	// float prior_width = prior_bbox.xmax() - prior_bbox.xmin();
+	// check_gt(prior_width, 0);
+	// // float prior_height = prior_bbox.ymax() - prior_bbox.ymin();
+	// check_gt(prior_height, 0);
+	// float prior_center_x = (prior_bbox.xmin() + prior_bbox.xmax()) / 2.;
+	// float prior_center_y = (prior_bbox.ymin() + prior_bbox.ymax()) / 2.;
+
+		float pbox_dlt, pbox_dlb, pbox_drb, pbox_drt;
+		float pbox_center_x, pbox_center_y;
+		float pbox_alpha, pbox_beta;
+		ltrbx = pbox.ltopx() - pbox.rbottomx();
+		ltrby = pbox.ltopy() - pbox.rbottomy();
+		lbrtx = pbox.rtopx() - pbox.lbottomx();
+		lbrty = pbox.rtopy() - pbox.lbottomy();
+			//float width = bbox.xmax() - bbox.xmin();
+			//float height = bbox.ymax() - bbox.ymin();
+				// float pbox_ltrb = sqrtf(powf(ltrbx, 2.) + powf(ltrby, 2.));
+				// float pbox_lbrt = sqrtf(powf(lbrtx, 2.) + powf(lbrty, 2.));
+				pbox_alpha = atan2f(lbrtx, lbrty) -  atan2f(-ltrbx, -ltrby);
+		p.set_ltopx(pbox.ltopx());
+		p.set_ltopy(pbox.ltopy());
+		p.set_lbottomx(pbox.lbottomx());
+		p.set_lbottomy(pbox.lbottomy());
+		p.set_rbottomx(pbox.lbottomx());
+		p.set_rbottomy(pbox.lbottomy());
+		p.set_rtopx(pbox.rtopx());
+		p.set_rtopy(pbox.rtopy());
+		area1 = PBoxSize(p);
+		p.set_ltopx(pbox.rtopx());
+		p.set_ltopy(pbox.rtopy());
+	  p.set_rbottomx(pbox.rbottomx());
+		p.set_rbottomy(pbox.rbottomy());
+		area2 = PBoxSize(p);
+		k = area2 / area1;
+
+		pbox_center_x = pbox.ltopx() + (pbox.rbottomx()-pbox.ltopx()) /(1+k);
+		pbox_center_y = pbox.ltopy() + (pbox.rbottomy()-pbox.ltopy()) /(1+k);
+
+		vector<float> pbox_points{pbox_center_x, pbox_center_y,
+																pbox.ltopx(), pbox.ltopy(),
+																pbox.lbottomx(), pbox.lbottomy(),
+																pbox.rbottomx(), pbox.rbottomy(),
+																pbox.rtopx(), pbox.rtopy()};
+
+		pbox_dlt = P2PDistance(pbox_points[0],pbox_points[1],pbox_points[2],pbox_points[3] );
+		pbox_dlb = P2PDistance(pbox_points[0],pbox_points[1],pbox_points[4],pbox_points[5] );
+		pbox_drb = P2PDistance(pbox_points[0],pbox_points[1],pbox_points[6],pbox_points[7] );
+		pbox_drt = P2PDistance(pbox_points[0],pbox_points[1],pbox_points[8],pbox_points[9] );
+		CHECK_GT(pbox_dlt,0);
+		CHECK_GT(pbox_dlb,0);
+		CHECK_GT(pbox_drb,0);
+		CHECK_GT(pbox_drt,0);
+
+// beta (-pi, pi)
+		pbox_beta = atan2f((pbox.rtopy()-pbox_center_y), (pbox.rtopx()-pbox_center_x));
+
+		float prior_mean_width, prior_mean_height;
+		prior_mean_width = (fabsf((prior_dlb+prior_drt)*cosf(prior_beta))
+												 + fabsf((prior_dlt+prior_drb)*cosf(prior_alpha-prior_beta)))/2.;
+		prior_mean_height = (fabsf((prior_dlb+prior_drt)*sinf(prior_beta))
+												 + fabsf((prior_dlt+prior_drb)*sinf(prior_alpha-prior_beta)))/2.;
+
+
+	// float bbox_width = bbox.xmax() - bbox.xmin();
+	// CHECK_GT(bbox_width, 0);
+	// float bbox_height = bbox.ymax() - bbox.ymin();
+	// CHECK_GT(bbox_height, 0);
+	// float bbox_center_x = (bbox.xmin() + bbox.xmax()) / 2.;
+	// float bbox_center_y = (bbox.ymin() + bbox.ymax()) / 2.;
+
+	if (encode_variance_in_target) {
+		encode_pbox->set_ltopx((pbox_center_x - prior_center_x)/prior_mean_width);
+		encode_pbox->set_ltopy((pbox_center_y - prior_center_y)/prior_mean_height);
+		encode_pbox->set_lbottomx(log(pbox_dlt/prior_ltrb));
+		encode_pbox->set_lbottomy(log(pbox_dlb/prior_lbrt));
+		encode_pbox->set_rbottomx(log(pbox_drb/prior_ltrb));
+		encode_pbox->set_rbottomy(log(pbox_drt/prior_lbrt));
+		encode_pbox->set_rtopx((pbox_alpha - prior_alpha));
+		encode_pbox->set_rtopy((pbox_beta - prior_beta));
+	// encode_bbox->set_xmin((bbox_center_x - prior_center_x) / prior_width);
+	// encode_bbox->set_ymin((bbox_center_y - prior_center_y) / prior_height);
+	//learn the ratio
+	// encode_bbox->set_xmax(log(bbox_width / prior_width));
+	// encode_bbox->set_ymax(log(bbox_height / prior_height));
+	}
+	else {
+	  encode_pbox->set_ltopx((pbox_center_x - prior_center_x)/prior_mean_width / prior_variance[0]);
+		encode_pbox->set_ltopy((pbox_center_y - prior_center_y)/prior_mean_height / prior_variance[1]);
+		encode_pbox->set_lbottomx(log(pbox_dlt/prior_ltrb) / prior_variance[2]);
+		encode_pbox->set_lbottomy(log(pbox_dlb/prior_lbrt) / prior_variance[3]);
+		encode_pbox->set_rbottomx(log(pbox_drb/prior_ltrb) / prior_variance[4]);
+		encode_pbox->set_rbottomy(log(pbox_drt/prior_lbrt) / prior_variance[5]);
+		encode_pbox->set_rtopx((pbox_alpha - prior_alpha) / prior_variance[6]);
+		encode_pbox->set_rtopy((pbox_beta - prior_beta) / prior_variance[7]);
+	// // Encode variance in bbox.
+	// encode_bbox->set_xmin(
+	// (bbox_center_x - prior_center_x) / prior_width / prior_variance[0]);
+	// encode_bbox->set_ymin(
+	// (bbox_center_y - prior_center_y) / prior_height / prior_variance[1]);
+	// encode_bbox->set_xmax(
+	// log(bbox_width / prior_width) / prior_variance[2]);
+	// encode_bbox->set_ymax(
+	// log(bbox_height / prior_height) / prior_variance[3]);
+	}
+	}
 	//else if (code_type == PriorBoxParameter_CodeType_CORNER_SIZE) {
 	//	float prior_width = prior_bbox.xmax() - prior_bbox.xmin();
 	//	CHECK_GT(prior_width, 0);
@@ -1077,6 +1205,11 @@ void EncodePBox(const NormalizedPBox& prior_pbox,
 	else {
 		LOG(FATAL) << "Unknown LocLossType.";
 	}
+}
+
+float P2PDistance(float p1x, float p1y, float p2x, float p2y)
+{
+	return sqrtf(powf((p1x-p2x), 2.f) + powf((p1y-p2y), 2.f));
 }
 
 void DecodeBBox(
@@ -1218,7 +1351,7 @@ void DecodePBox(
 			// variance is encoded in pbox, we need to scale the offset accordingly.
 			decode_pbox->set_ltopx(
 				prior_pbox.ltopx() + prior_variance[0] * pbox.ltopx());
-			decode_pbox->set_ltopy(
+		  decode_pbox->set_ltopy(
 				prior_pbox.ltopy() + prior_variance[1] * pbox.ltopy());
 			decode_pbox->set_lbottomx(
 				prior_pbox.lbottomx() + prior_variance[2] * pbox.lbottomx());
@@ -1236,49 +1369,155 @@ void DecodePBox(
 		}
 	}
 	//*************************************************************************
-	//else if (code_type == PriorPBoxParameter_CodeType_CENTER_SIZE) {
-	//	float ltbcx = (prior_pbox.ltopx() + prior_pbox.lbottomx()) / 2.;
-	//	float ltbcy = (prior_pbox.ltopy() + prior_pbox.lbottomy()) / 2.;
-	//	float rtbcx = (prior_pbox.rtopx() + prior_pbox.rbottomx()) / 2.;
-	//	float rtbcy = (prior_pbox.rtopy() + prior_pbox.rbottomy()) / 2.;
-	//	float prior_width = sqrt(pow((ltbcx - rtbcx), 2.) + pow((ltbcy - rtbcy), 2.);
-	//	CHECK_GT(prior_width, 0);
-	//	float tlrcx = (prior_pbox.ltopx() + prior_pbox.rtopx()) / 2.;
-	//	float tlrcy = (prior_pbox.ltopy() + prior_pbox.rtopy()) / 2.;
-	//	float blrcx = (prior_pbox.lbottomx() + prior_pbox.rbottomx()) / 2.;
-	//	float blrcy = (prior_pbox.lbottomy() + prior_pbox.rbottomy()) / 2.;
-	//	float prior_height = sqrt(pow((tlrcx - blrcx), 2.) + pow((tlrcy - blrcy), 2.));
-	//	CHECK_GT(prior_height, 0);
-	//	float prior_center_x = (prior_bbox.xmin() + prior_bbox.xmax()) / 2.;
-	//	float prior_center_y = (prior_bbox.ymin() + prior_bbox.ymax()) / 2.;
+    else if (code_type == PriorPBoxParameter_CodeType_CENTER_SIZE_ANGLE) {
+	float prior_dlt, prior_dlb, prior_drb, prior_drt;
+		float prior_center_x, prior_center_y;
+		float prior_alpha, prior_beta;
+			float ltrbx = prior_pbox.ltopx() - prior_pbox.rbottomx();
+			float ltrby = prior_pbox.ltopy() - prior_pbox.rbottomy();
+			float lbrtx = prior_pbox.rtopx() - prior_pbox.lbottomx();
+			float lbrty = prior_pbox.rtopy() - prior_pbox.lbottomy();
+			//float width = bbox.xmax() - bbox.xmin();
+			//float height = bbox.ymax() - bbox.ymin();
+				float prior_ltrb = sqrtf(powf(ltrbx, 2.) + powf(ltrby, 2.));
+				float prior_lbrt = sqrtf(powf(lbrtx, 2.) + powf(lbrty, 2.));
+				prior_alpha = atan2f(lbrtx, lbrty) -  atan2f(-ltrbx, -ltrby);
+		NormalizedPBox p;
+		p.set_ltopx(prior_pbox.ltopx());
+		p.set_ltopy(prior_pbox.ltopy());
+		p.set_lbottomx(prior_pbox.lbottomx());
+		p.set_lbottomy(prior_pbox.lbottomy());
+		p.set_rbottomx(prior_pbox.lbottomx());
+		p.set_rbottomy(prior_pbox.lbottomy());
+		p.set_rtopx(prior_pbox.rtopx());
+		p.set_rtopy(prior_pbox.rtopy());
+		float area1, area2;
+		area1 = PBoxSize(p);
+		p.set_ltopx(prior_pbox.rtopx());
+		p.set_ltopy(prior_pbox.rtopy());
+	  p.set_rbottomx(prior_pbox.rbottomx());
+		p.set_rbottomy(prior_pbox.rbottomy());
+		area2 = PBoxSize(p);
+		float k = area2 / area1;
 
-	//	float decode_bbox_center_x, decode_bbox_center_y;
-	//	float decode_bbox_width, decode_bbox_height;
-	//	if (variance_encoded_in_target) {
-	//		// variance is encoded in target, we simply need to retore the offset
-	//		// predictions.
-	//		decode_bbox_center_x = bbox.xmin() * prior_width + prior_center_x;
-	//		decode_bbox_center_y = bbox.ymin() * prior_height + prior_center_y;
-	//		decode_bbox_width = exp(bbox.xmax()) * prior_width;
-	//		decode_bbox_height = exp(bbox.ymax()) * prior_height;
-	//	}
-	//	else {
-	//		// variance is encoded in bbox, we need to scale the offset accordingly.
-	//		decode_bbox_center_x =
-	//			prior_variance[0] * bbox.xmin() * prior_width + prior_center_x;
-	//		decode_bbox_center_y =
-	//			prior_variance[1] * bbox.ymin() * prior_height + prior_center_y;
-	//		decode_bbox_width =
-	//			exp(prior_variance[2] * bbox.xmax()) * prior_width;
-	//		decode_bbox_height =
-	//			exp(prior_variance[3] * bbox.ymax()) * prior_height;
-	//	}
+		prior_center_x = prior_pbox.ltopx() + (prior_pbox.rbottomx()-prior_pbox.ltopx()) /(1+k);
+		prior_center_y = prior_pbox.ltopy() + (prior_pbox.rbottomy()-prior_pbox.ltopy()) /(1+k);
 
-	//	decode_bbox->set_xmin(decode_bbox_center_x - decode_bbox_width / 2.);
-	//	decode_bbox->set_ymin(decode_bbox_center_y - decode_bbox_height / 2.);
-	//	decode_bbox->set_xmax(decode_bbox_center_x + decode_bbox_width / 2.);
-	//	decode_bbox->set_ymax(decode_bbox_center_y + decode_bbox_height / 2.);
-	//}
+		vector<float> prior_points{prior_center_x, prior_center_y,
+																prior_pbox.ltopx(), prior_pbox.ltopy(),
+																prior_pbox.lbottomx(), prior_pbox.lbottomy(),
+																prior_pbox.rbottomx(), prior_pbox.rbottomy(),
+																prior_pbox.rtopx(), prior_pbox.rtopy()};
+
+		prior_dlt = P2PDistance(prior_points[0],prior_points[1],prior_points[2],prior_points[3] );
+		prior_dlb = P2PDistance(prior_points[0],prior_points[1],prior_points[4],prior_points[5] );
+		prior_drb = P2PDistance(prior_points[0],prior_points[1],prior_points[6],prior_points[7] );
+		prior_drt = P2PDistance(prior_points[0],prior_points[1],prior_points[8],prior_points[9] );
+		// CHECK_GT(prior_dlt,0);
+		// CHECK_GT(prior_dlb,0);
+		// CHECK_GT(prior_drb,0);
+		// CHECK_GT(prior_drt,0);
+
+// beta (-pi, pi)
+		prior_beta = atan2f((prior_pbox.rtopy()-prior_center_y), (prior_pbox.rtopx()-prior_center_x));
+
+		float prior_mean_width, prior_mean_height;
+		prior_mean_width = (fabsf((prior_dlb+prior_drt)*cos(prior_beta))
+												 + fabsf((prior_dlt+prior_drb)*cos(prior_alpha-prior_beta)))/2.;
+		prior_mean_height = (fabsf((prior_dlb+prior_drt)*sin(prior_beta))
+												 + fabsf((prior_dlt+prior_drb)*sin(prior_alpha-prior_beta)))/2.;
+		CHECK_GT(prior_mean_width, 0);
+		CHECK_GT(prior_mean_height, 0);
+
+// encode_pbox->set_ltopx((pbox_center_x - prior_center_x)/prior_mean_width);
+// 		encode_pbox->set_ltopy((pbox_center_y - prior_center_y)/prior_mean_height);
+// 		encode_pbox->set_lbottomx(log(pbox_dlt/prior_ltrb));
+// 		encode_pbox->set_lbottomy(log(pbox_dlb/prior_lbrt));
+// 		encode_pbox->set_rbottomx(log(pbox_drb/prior_ltrb));
+// 		encode_pbox->set_rbottomy(log(pbox_drt/prior_lbrt));
+// 		encode_pbox->set_rtopx((pbox_alpha - prior_alpha));
+// 		encode_pbox->set_rtopy((pbox_beta - prior_beta));
+	
+        // float ltbcx = (prior_pbox.ltopx() + prior_pbox.lbottomx()) / 2.;
+        // float ltbcy = (prior_pbox.ltopy() + prior_pbox.lbottomy()) / 2.;
+        // float rtbcx = (prior_pbox.rtopx() + prior_pbox.rbottomx()) / 2.;
+        // float rtbcy = (prior_pbox.rtopy() + prior_pbox.rbottomy()) / 2.;
+        // float prior_width = sqrt(pow((ltbcx - rtbcx), 2.) + pow((ltbcy - rtbcy), 2.);
+        // CHECK_GT(prior_width, 0);
+        // float tlrcx = (prior_pbox.ltopx() + prior_pbox.rtopx()) / 2.;
+        // float tlrcy = (prior_pbox.ltopy() + prior_pbox.rtopy()) / 2.;
+        // float blrcx = (prior_pbox.lbottomx() + prior_pbox.rbottomx()) / 2.;
+        // float blrcy = (prior_pbox.lbottomy() + prior_pbox.rbottomy()) / 2.;
+        // float prior_height = sqrt(pow((tlrcx - blrcx), 2.) + pow((tlrcy - blrcy), 2.));
+        // CHECK_GT(prior_height, 0);
+        // float prior_center_x = (prior_bbox.xmin() + prior_bbox.xmax()) / 2.;
+        // float prior_center_y = (prior_bbox.ymin() + prior_bbox.ymax()) / 2.;
+
+        float decode_center_x, decode_center_y;
+        float decode_dlt, decode_dlb, decode_drb, decode_drt;
+				float decode_alpha, decode_beta;
+        if (variance_encoded_in_target) {
+            // variance is encoded in target, we simply need to retore the offset
+            // predictions.
+						decode_center_x = pbox.ltopx() * prior_mean_width + prior_center_x;
+						decode_center_y = pbox.ltopy() * prior_mean_height + prior_center_y;
+						decode_dlt = expf(pbox.lbottomx()) * prior_ltrb;
+						decode_dlb = expf(pbox.lbottomy()) * prior_lbrt;
+						decode_drb = expf(pbox.rbottomx()) * prior_ltrb;
+						decode_drt = expf(pbox.rbottomy()) * prior_lbrt;
+						decode_alpha = pbox.rtopx() + prior_alpha;
+						decode_beta = pbox.rtopy() + prior_beta;
+
+            // decode_bbox_center_x = bbox.xmin() * prior_width + prior_center_x;
+            // decode_bbox_center_y = bbox.ymin() * prior_height + prior_center_y;
+            // decode_bbox_width = exp(bbox.xmax()) * prior_width;
+            // decode_bbox_height = exp(bbox.ymax()) * prior_height;
+        }
+        else {
+            // variance is encoded in bbox, we need to scale the offset accordingly.
+ 						decode_center_x = prior_variance[0] * pbox.ltopx() * prior_mean_width + prior_center_x;
+						decode_center_y = prior_variance[1] * pbox.ltopy() * prior_mean_height + prior_center_y;
+						decode_dlt = expf(prior_variance[2] * pbox.lbottomx()) * prior_ltrb;
+						decode_dlb = expf(prior_variance[3] * pbox.lbottomy()) * prior_lbrt;
+						decode_drb = expf(prior_variance[4] * pbox.rbottomx()) * prior_ltrb;
+						decode_drt = expf(prior_variance[5] * pbox.rbottomy()) * prior_lbrt;
+						decode_alpha = prior_variance[6] * pbox.rtopx() + prior_alpha;
+						decode_beta = prior_variance[7] * pbox.rtopy() + prior_beta;
+
+          //  decode_bbox_center_x =
+          //       prior_variance[0] * bbox.xmin() * prior_width + prior_center_x;
+          //   decode_bbox_center_y =
+          //       prior_variance[1] * bbox.ymin() * prior_height + prior_center_y;
+          //   decode_bbox_width =
+          //       exp(prior_variance[2] * bbox.xmax()) * prior_width;
+          //   decode_bbox_height =
+          //       exp(prior_variance[3] * bbox.ymax()) * prior_height;
+        }
+				float ltx, lty, lbx, lby, rbx, rby, rtx, rty;
+				ltx = decode_center_x - decode_dlt * cos(decode_alpha - decode_beta);
+				lty = decode_center_y + decode_dlt * sin(decode_alpha - decode_beta);
+				lbx = decode_center_x - decode_dlb * cos(decode_beta);
+				lby = decode_center_y - decode_dlb * sin(decode_beta);
+				rbx = decode_center_x + decode_drb * cos(decode_alpha - decode_beta);
+				rby = decode_center_y - decode_drb * sin(decode_alpha - decode_beta);
+				rtx = decode_center_x + decode_drt * cos(decode_beta);
+				rty = decode_center_y + decode_drt * sin(decode_beta);
+
+				decode_pbox->set_ltopx(ltx);
+				decode_pbox->set_ltopy(lty);
+				decode_pbox->set_lbottomx(lbx);
+				decode_pbox->set_lbottomy(lby);
+				decode_pbox->set_rbottomx(rbx);
+				decode_pbox->set_rbottomy(rby);
+				decode_pbox->set_rtopx(rtx);
+				decode_pbox->set_rtopy(rty);
+				
+
+        // decode_bbox->set_xmin(decode_bbox_center_x - decode_bbox_width / 2.);
+        // decode_bbox->set_ymin(decode_bbox_center_y - decode_bbox_height / 2.);
+        // decode_bbox->set_xmax(decode_bbox_center_x + decode_bbox_width / 2.);
+        // decode_bbox->set_ymax(decode_bbox_center_y + decode_bbox_height / 2.);
+    }
 	//else if (code_type == PriorPBoxParameter_CodeType_CORNER_SIZE) {
 	//	float prior_width = prior_bbox.xmax() - prior_bbox.xmin();
 	//	CHECK_GT(prior_width, 0);
@@ -1813,7 +2052,7 @@ void FindPboxMatches(const vector<LabelPBox>& all_loc_preds,
 	// Find the matches.
 	int num = all_loc_preds.size();
 	for (int i = 0; i < num; ++i) {
-		//LOG(INFO) << "num: " << num; 
+		//LOG(INFO) << "num: " << num;
 		map<int, vector<int> > match_indices;
 		map<int, vector<float> > match_overlaps;
 		// Check if there is ground truth for current image.
@@ -2776,7 +3015,7 @@ void EncodePboxLocPrediction(const vector<LabelPBox>& all_loc_preds,
 				loc_gt_data[count * 8 + 6] = gt_encode.rtopx();
 				loc_gt_data[count * 8 + 7] = gt_encode.rtopy();
 				// Store location prediction.
-				//****************************** 
+				//******************************
 				CHECK_LT(j, loc_pred.size());
 				if (bp_inside) {
 					NormalizedPBox match_pbox = prior_pboxes[j];

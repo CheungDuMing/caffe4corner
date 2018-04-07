@@ -402,6 +402,7 @@ LIBRARY_DIRS += $(LIB_BUILD_DIR)
 
 # Automatic dependency generation (nvcc is handled separately)
 CXXFLAGS += -MMD -MP
+CXXFLAGS += -std=gnu++11
 
 # Complete build flags.
 COMMON_FLAGS += $(foreach includedir,$(INCLUDE_DIRS),-isystem $(includedir))

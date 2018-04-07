@@ -1609,7 +1609,7 @@ message PriorPBoxParameter {
   // support CORNER only at present DecodePBoxes in bbox_util.cpp
   enum CodeType {
     CORNER = 1;
-    CENTER_SIZE = 2;
+    CENTER_SIZE_ANGLE = 2;
     CORNER_SIZE = 3;
   }
   // number of pboxes per aspect radio.

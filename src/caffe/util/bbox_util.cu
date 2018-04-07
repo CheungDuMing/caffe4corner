@@ -114,6 +114,7 @@ __host__ __device__ Dtype JaccardOverlapPboxGPU(const Dtype* pbox1,
     return Dtype(0.);
   } else { */
 	  
+  if(PBoxSizeGPU<Dtype>(pbox1)==0.f || PBoxSizeGPU<Dtype>(pbox2)==0.f) return 0.f;
 	 // float d1, d2, d3, d4;
 	const Dtype d1 = sqrtf((powf((pbox1[0] - pbox2[0]), 2.f) + powf((pbox1[1] - pbox2[1]), 2.f)));
 	const Dtype d2 = sqrtf((powf((pbox1[2] - pbox2[2]), 2.f) + powf((pbox1[3] - pbox2[3]), 2.f)));
@@ -122,14 +123,16 @@ __host__ __device__ Dtype JaccardOverlapPboxGPU(const Dtype* pbox1,
 
 	const Dtype d = max(max(max(d1, d2), d3), d4);
 
-	const Dtype D1 = sqrtf((powf((pbox1[0] - pbox1[2]), 2.f) + powf((pbox1[1] - pbox1[3]), 2.f)));
-	const Dtype D2 = sqrtf((powf((pbox1[2] - pbox1[4]), 2.f) + powf((pbox1[3] - pbox1[5]), 2.f)));
-	const Dtype D3 = sqrtf((powf((pbox1[4] - pbox1[6]), 2.f) + powf((pbox1[5] - pbox1[7]), 2.f)));
-	const Dtype D4 = sqrtf((powf((pbox1[6] - pbox1[0]), 2.f) + powf((pbox1[7] - pbox1[1]), 2.f)));
+	// const Dtype D1 = sqrtf((powf((pbox1[0] - pbox1[2]), 2.f) + powf((pbox1[1] - pbox1[3]), 2.f)));
+	// const Dtype D2 = sqrtf((powf((pbox1[2] - pbox1[4]), 2.f) + powf((pbox1[3] - pbox1[5]), 2.f)));
+	// const Dtype D3 = sqrtf((powf((pbox1[4] - pbox1[6]), 2.f) + powf((pbox1[5] - pbox1[7]), 2.f)));
+	// const Dtype D4 = sqrtf((powf((pbox1[6] - pbox1[0]), 2.f) + powf((pbox1[7] - pbox1[1]), 2.f)));
 
-	const Dtype D = min(min(min(D1, D2), D3), D4);
+	// const Dtype D = min(min(min(D1, D2), D3), D4);
 
-	return 1.f - expf(-D / d);
+  //return 1.f - expf(-D / d);
+  if(d>1.f) return 0.f;
+  return 1.f - d;
   //}
 }
 
@@ -148,6 +151,11 @@ __device__ Dtype Max(const Dtype x, const Dtype y) {
   return x > y ? x : y;
 }
 
+template <typename Dtype>
+__device__ Dtype P2PDistanceGPU(const Dtype p1x, const Dtype p1y, const Dtype p2x, const Dtype p2y)
+{
+	return sqrtf(powf((p1x-p2x), 2.f) + powf((p1y-p2y), 2.f));
+}
 /*template <typename Dtype>*/
 /*__device__ Dtype Pow(const Dtype x, const Dtype n) {*/
     /*Dtype result = Dtype(1.);*/
@@ -324,7 +332,7 @@ __global__ void DecodePBoxesKernel(const int nthreads,
           const int num_loc_classes, const int background_label_id,
           const bool clip_pbox, Dtype* pbox_data) {
   CUDA_KERNEL_LOOP(index, nthreads) {
-    const int i = index % 4;
+    const int i = index % 8;
     const int c = (index / 8) % num_loc_classes;
     const int d = (index / 8 / num_loc_classes) % num_priors;
     if (!share_location && c == background_label_id) {
@@ -343,57 +351,191 @@ __global__ void DecodePBoxesKernel(const int nthreads,
         pbox_data[index] =
           prior_data[pi + i] + loc_data[index] * prior_data[vi + i];
       }
-    } /* else if (code_type == PriorPBoxParameter_CodeType_CENTER_SIZE) {
-      const Dtype p_xmin = prior_data[pi];
-      const Dtype p_ymin = prior_data[pi + 1];
-      const Dtype p_xmax = prior_data[pi + 2];
-      const Dtype p_ymax = prior_data[pi + 3];
-      const Dtype prior_width = p_xmax - p_xmin;
-      const Dtype prior_height = p_ymax - p_ymin;
-      const Dtype prior_center_x = (p_xmin + p_xmax) / 2.;
-      const Dtype prior_center_y = (p_ymin + p_ymax) / 2.;
+    } else if (code_type == PriorPBoxParameter_CodeType_CENTER_SIZE_ANGLE) {
+      const Dtype p_ltopx = prior_data[pi];
+      const Dtype p_ltopy = prior_data[pi + 1];
+      const Dtype p_lbottomx = prior_data[pi + 2];
+      const Dtype p_lbottomy = prior_data[pi + 3];
+      const Dtype p_rbottomx = prior_data[pi + 4];
+      const Dtype p_rbottomy = prior_data[pi + 5];
+      const Dtype p_rtopx = prior_data[pi + 6];
+      const Dtype p_rtopy = prior_data[pi + 7];
+ 
+    	// const Dtype prior_dlt, prior_dlb, prior_drb, prior_drt;
+	  	// const Dtype prior_center_x, prior_center_y;
+		  // const Dtype prior_alpha, prior_beta;
+			const Dtype ltrbx = p_ltopx - p_rbottomx; //prior_pbox.ltopx() - prior_pbox.rbottomx();
+			const Dtype ltrby = p_ltopy - p_rbottomy;//prior_pbox.ltopy() - prior_pbox.rbottomy();
+			const Dtype lbrtx = p_rtopx - p_lbottomx;//prior_pbox.rtopx() - prior_pbox.lbottomx();
+			const Dtype lbrty = p_rtopy - p_lbottomy;//prior_pbox.rtopy() - prior_pbox.lbottomy();
+			//float width = bbox.xmax() - bbox.xmin(); //float height = bbox.ymax() - bbox.ymin(); 
+        const Dtype prior_ltrb = sqrtf(powf(ltrbx, 2.) + powf(ltrby, 2.));
+				const Dtype prior_lbrt = sqrtf(powf(lbrtx, 2.) + powf(lbrty, 2.));
+				const Dtype prior_alpha = atan2f(lbrtx, lbrty) -  atan2f(-ltrbx, -ltrby);
+      
+      // Dtype * p = NULL;
+      // size_t size = 8 * sizeof(Dtype);
+      // cudaMalloc((void**)&p, size);
+      Dtype p[8];
+		// NormalizedPBox p;
+		p[0] = (p_ltopx);
+		p[1] = (p_ltopy);
+		p[2] = (p_lbottomx);
+		p[3] = (p_lbottomy);
+		p[4] = (p_lbottomx);
+		p[5] = (p_lbottomy);
+		p[6] = (p_rtopx);
+		p[7] = (p_rtopy);
+		// const Dtype area1, area2;
+		const Dtype area1 = PBoxSizeGPU<Dtype>(p);
+		p[0] = (p_rtopx);
+		p[1] = (p_rtopy);
+	  p[4] = (p_rbottomx);
+		p[5] = (p_rbottomy);
+		const Dtype area2 = PBoxSizeGPU<Dtype>(p);
+		const Dtype k = area2 / area1;
+    // cudaFree(p);
+    delete p;
 
-      const Dtype xmin = loc_data[index - i];
-      const Dtype ymin = loc_data[index - i + 1];
-      const Dtype xmax = loc_data[index - i + 2];
-      const Dtype ymax = loc_data[index - i + 3];
+		const Dtype prior_center_x = p_ltopx + (p_rbottomx - p_ltopx) /(1+k);
+		const Dtype prior_center_y = p_ltopy + (p_rbottomy - p_ltopy) /(1+k);
+		// prior_center_y = prior_pbox.ltopy() + (prior_pbox.rbottomy()-prior_pbox.ltopy()) /(1+k);
 
-      Dtype decode_bbox_center_x, decode_bbox_center_y;
-      Dtype decode_bbox_width, decode_bbox_height;
+    // Dtype* prior_points = NULL;
+    // size = 10 * sizeof(Dtype);
+    // cudaMalloc((void**)& prior_points, size);
+    Dtype prior_points[10];
+
+		prior_points[0] = prior_center_x; 
+    prior_points[1] = prior_center_y;
+    prior_points[2] = p_ltopx; 
+    prior_points[3] = p_ltopy;//prior_pbox.ltopx(), prior_pbox.ltopy(),
+    prior_points[4] = p_lbottomx;
+    prior_points[5] = p_lbottomy; //prior_pbox.lbottomx(), prior_pbox.lbottomy(),
+    prior_points[6] = p_rbottomx;
+    prior_points[7] = p_rbottomy;//prior_pbox.rbottomx(), prior_pbox.rbottomy(),
+    prior_points[8] = p_rtopx;
+    prior_points[9] = p_rtopy;//prior_pbox.rtopx(), prior_pbox.rtopy()};
+
+		const Dtype prior_dlt = P2PDistanceGPU<Dtype>(prior_points[0],prior_points[1],prior_points[2],prior_points[3] );
+		const Dtype prior_dlb = P2PDistanceGPU<Dtype>(prior_points[0],prior_points[1],prior_points[4],prior_points[5] );
+		const Dtype prior_drb = P2PDistanceGPU<Dtype>(prior_points[0],prior_points[1],prior_points[6],prior_points[7] );
+		const Dtype prior_drt = P2PDistanceGPU<Dtype>(prior_points[0],prior_points[1],prior_points[8],prior_points[9] );
+    // cudaFree(prior_points);
+    delete prior_points;
+		// CHECK_GT(prior_dlt,0);
+		// CHECK_GT(prior_dlb,0);
+		// CHECK_GT(prior_drb,0);
+		// CHECK_GT(prior_drt,0);
+
+// beta (-pi, pi)
+		const Dtype prior_beta = atan2f((p_rtopy- prior_center_y), (p_rtopx - prior_center_x));
+
+		// const Dtype prior_mean_width, prior_mean_height;
+		const Dtype prior_mean_width = (fabsf((prior_dlb+prior_drt)*cosf(prior_beta))
+												 + fabsf((prior_dlt+prior_drb)*cosf(prior_alpha-prior_beta)))/2.;
+		const Dtype prior_mean_height = (fabsf((prior_dlb+prior_drt)*sinf(prior_beta))
+												 + fabsf((prior_dlt+prior_drb)*sinf(prior_alpha-prior_beta)))/2.;
+		//CHECK_GT(prior_mean_width, 0);
+		// CHECK_GT(prior_mean_height, 0);
+
+
+      // const Dtype p_xmin = prior_data[pi];
+      // const Dtype p_ymin = prior_data[pi + 1];
+      // const Dtype p_xmax = prior_data[pi + 2];
+      // const Dtype p_ymax = prior_data[pi + 3];
+      // const Dtype prior_width = p_xmax - p_xmin;
+      // const Dtype prior_height = p_ymax - p_ymin;
+      // const Dtype prior_center_x = (p_xmin + p_xmax) / 2.;
+      // const Dtype prior_center_y = (p_ymin + p_ymax) / 2.;
+
+      const Dtype ltopx = loc_data[index - i];
+      const Dtype ltopy = loc_data[index - i + 1];
+      const Dtype lbottomx = loc_data[index - i + 2];
+      const Dtype lbottomy = loc_data[index - i + 3];
+      const Dtype rbottomx = loc_data[index - i + 4];
+      const Dtype rbottomy = loc_data[index - i + 5];
+      const Dtype rtopx = loc_data[index - i + 6];
+      const Dtype rtopy = loc_data[index - i + 7];
+      // const Dtype xmin = loc_data[index - i];
+      // const Dtype ymin = loc_data[index - i + 1];
+      // const Dtype xmax = loc_data[index - i + 2];
+      // const Dtype ymax = loc_data[index - i + 3];
+
+      Dtype decode_center_x, decode_center_y;
+      Dtype decode_dlt, decode_dlb, decode_drb, decode_drt;
+      Dtype decode_alpha, decode_beta;
+      // Dtype decode_bbox_width, decode_bbox_height;
       if (variance_encoded_in_target) {
         // variance is encoded in target, we simply need to retore the offset
         // predictions.
-        decode_bbox_center_x = xmin * prior_width + prior_center_x;
-        decode_bbox_center_y = ymin * prior_height + prior_center_y;
-        decode_bbox_width = exp(xmax) * prior_width;
-        decode_bbox_height = exp(ymax) * prior_height;
+        decode_center_x = ltopx * prior_mean_width + prior_center_x;// xmin * prior_width + prior_center_x;
+        decode_center_y = ltopy * prior_mean_height + prior_center_y;// ymin * prior_height + prior_center_y;
+        decode_dlt = expf(lbottomx) * prior_ltrb;
+        decode_dlb = expf(lbottomy) * prior_lbrt;
+        decode_drb = expf(rbottomx) * prior_ltrb;
+        decode_drt = expf(rbottomy) * prior_lbrt;
+        decode_alpha = rtopx + prior_alpha;
+        decode_beta = rtopy + prior_beta;
       } else {
         // variance is encoded in bbox, we need to scale the offset accordingly.
-        decode_bbox_center_x =
-          prior_data[vi] * xmin * prior_width + prior_center_x;
-        decode_bbox_center_y =
-          prior_data[vi + 1] * ymin * prior_height + prior_center_y;
-        decode_bbox_width =
-          exp(prior_data[vi + 2] * xmax) * prior_width;
-        decode_bbox_height =
-          exp(prior_data[vi + 3] * ymax) * prior_height;
+        decode_center_x = prior_data[vi] * ltopx * prior_mean_width + prior_center_x;// xmin * prior_width + prior_center_x;
+        decode_center_y = prior_data[vi + 1] * ltopy * prior_mean_height + prior_center_y;// ymin * prior_height + prior_center_y;
+        decode_dlt = expf(prior_data[vi + 2] * lbottomx) * prior_ltrb;
+        decode_dlb = expf(prior_data[vi + 3] * lbottomy) * prior_lbrt;
+        decode_drb = expf(prior_data[vi + 4] * rbottomx) * prior_ltrb;
+        decode_drt = expf(prior_data[vi + 5] * rbottomy) * prior_lbrt;
+        decode_alpha = prior_data[vi + 6] * rtopx + prior_alpha;
+        decode_beta = prior_data[vi + 7] * rtopy + prior_beta;
+
+        // decode_bbox_center_x =
+        //   prior_data[vi] * xmin * prior_width + prior_center_x;
+        // decode_bbox_center_y =
+        //   prior_data[vi + 1] * ymin * prior_height + prior_center_y;
+        // decode_bbox_width =
+        //   exp(prior_data[vi + 2] * xmax) * prior_width;
+        // decode_bbox_height =
+        //   exp(prior_data[vi + 3] * ymax) * prior_height;
       }
+				// float ltx, lty, lbx, lby, rbx, rby, rtx, rty;
+				const Dtype ltx = decode_center_x - decode_dlt * cosf(decode_alpha - decode_beta);
+				const Dtype lty = decode_center_y + decode_dlt * sinf(decode_alpha - decode_beta);
+				const Dtype lbx = decode_center_x - decode_dlb * cosf(decode_beta);
+				const Dtype lby = decode_center_y - decode_dlb * sinf(decode_beta);
+				const Dtype rbx = decode_center_x + decode_drb * cosf(decode_alpha - decode_beta);
+				const Dtype rby = decode_center_y - decode_drb * sinf(decode_alpha - decode_beta);
+				const Dtype rtx = decode_center_x + decode_drt * cosf(decode_beta);
+				const Dtype rty = decode_center_y + decode_drt * sinf(decode_beta);
+
 
       switch (i) {
         case 0:
-          bbox_data[index] = decode_bbox_center_x - decode_bbox_width / 2.;
+          pbox_data[index] = ltx;
           break;
         case 1:
-          bbox_data[index] = decode_bbox_center_y - decode_bbox_height / 2.;
+          pbox_data[index] = lty;
           break;
         case 2:
-          bbox_data[index] = decode_bbox_center_x + decode_bbox_width / 2.;
+          pbox_data[index] = lbottomx;
           break;
         case 3:
-          bbox_data[index] = decode_bbox_center_y + decode_bbox_height / 2.;
+          pbox_data[index] = lbottomy;
           break;
+        case 4:
+          pbox_data[index] = rbottomx;
+          break;
+        case 5:
+          pbox_data[index] = rbottomy;
+          break;
+        case 6:
+          pbox_data[index] = rtx;
+          break;
+        case 7:
+          pbox_data[index] = rty;
+          break;
+        
       }
-    } else if (code_type == PriorBoxParameter_CodeType_CORNER_SIZE) {
+    }/* else if (code_type == PriorBoxParameter_CodeType_CORNER_SIZE) {
       const Dtype p_xmin = prior_data[pi];
       const Dtype p_ymin = prior_data[pi + 1];
       const Dtype p_xmax = prior_data[pi + 2];
