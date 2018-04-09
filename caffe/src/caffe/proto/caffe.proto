@@ -110,6 +110,8 @@ message EmitConstraint {
   enum EmitType {
     CENTER = 0;
     MIN_OVERLAP = 1;
+    CORNER = 2;
+    DIAG_CENTER = 3;
   }
   optional EmitType emit_type = 1 [default = CENTER];
   // If emit_type is MIN_OVERLAP, provide the emit_overlap.
@@ -1609,7 +1611,8 @@ message PriorPBoxParameter {
   // support CORNER only at present DecodePBoxes in bbox_util.cpp
   enum CodeType {
     CORNER = 1;
-    CENTER_SIZE_ANGLE = 2;
+    DIAG_CENTER_SIZE_ANGLE = 2;
+    CENTER_SIZE_ANGLE = 4;
     CORNER_SIZE = 3;
   }
   // number of pboxes per aspect radio.

@@ -353,7 +353,7 @@ __global__ void DecodePBoxesKernel(const int nthreads,
         pbox_data[index] =
           prior_data[pi + i] + loc_data[index] * prior_data[vi + i];
       }
-    } else if (code_type == PriorPBoxParameter_CodeType_CENTER_SIZE_ANGLE) {
+    } else if (code_type == PriorPBoxParameter_CodeType_DIAG_CENTER_SIZE_ANGLE) {
       const Dtype p_ltopx = prior_data[pi];
       const Dtype p_ltopy = prior_data[pi + 1];
       const Dtype p_lbottomx = prior_data[pi + 2];

@@ -861,24 +861,33 @@ bool MeetEmitConstraint(const NormalizedBBox& src_bbox,
 bool MeetEmitConstraint(const NormalizedBBox& src_bbox,
                         const NormalizedPBox& pbox,
                         const EmitConstraint& emit_constraint) {
-  /*EmitType emit_type = emit_constraint.emit_type();*/
-  //if (emit_type == EmitConstraint_EmitType_CENTER) {
-    //float x_center = (pbox.xmin() + pbox.xmax()) / 2;
-    //float y_center = (pbox.ymin() + pbox.ymax()) / 2;
-    //if (x_center >= src_bbox.xmin() && x_center <= src_bbox.xmax() &&
-        //y_center >= src_bbox.ymin() && y_center <= src_bbox.ymax()) {
-      //return true;
-    //} else {
-      //return false;
-    //}
-  //} else if (emit_type == EmitConstraint_EmitType_MIN_OVERLAP) {
-    //float bbox_coverage = BBoxCoverage(bbox, src_bbox);
-    //return bbox_coverage > emit_constraint.emit_overlap();
-  //} else {
-    //LOG(FATAL) << "Unknown emit type.";
-    //return false;
-  /*}*/
-    return true;
+  EmitType emit_type = emit_constraint.emit_type();
+  float ltx, lty, lbx, lby, rbx, rby, rtx, rty;
+  ltx = pbox.ltopx(); lty = pbox.ltopy();
+  lbx = pbox.lbottomx(); lby = pbox.lbottomy();
+  rbx = pbox.rbottomx(); rby = pbox.rbottomy();
+  rtx = pbox.rtopx(); rty = pbox.rtopy();
+  if (emit_type == EmitConstraint_EmitType_CENTER) {
+    float x_center = (ltx + lbx + rbx + rtx) /4.;
+    float y_center = (lty + lby + rby + rty) /4.;
+    if (x_center >= src_bbox.xmin() && x_center <= src_bbox.xmax() &&
+        y_center >= src_bbox.ymin() && y_center <= src_bbox.ymax()) {
+      return true;
+    } else {
+      return false;
+    }
+  } else if (emit_type == EmitConstraint_EmitType_CORNER) {
+      if(std::min(std::min(std::min(ltx, lbx), rbx), rtx)>= src_bbox.xmin()
+              && std::min(std::min(std::min(lty, lby), rby), rty)>= src_bbox.ymin()
+              && std::max(std::max(std::max(ltx, lbx), rbx), rtx)<=src_bbox.xmax()
+              && std::max(std::max(std::max(lty, lby), rby), rty)<=src_bbox.ymax())
+          return true;
+      else
+          return false;
+  } else {
+    LOG(FATAL) << "Unknown emit type.";
+    return false;
+  }
 }
 
 
@@ -1020,7 +1029,7 @@ void EncodePBox(const NormalizedPBox& prior_pbox,
 				(bbox.ymax() - prior_bbox.ymax()) / prior_variance[3]);*/
 		}
 	}
-	else if (code_type == PriorPBoxParameter_CodeType_CENTER_SIZE_ANGLE) {
+	else if (code_type == PriorPBoxParameter_CodeType_DIAG_CENTER_SIZE_ANGLE) {
 		float prior_dlt, prior_dlb, prior_drb, prior_drt;
 		float prior_center_x, prior_center_y;
 		float prior_alpha, prior_beta;
@@ -1395,7 +1404,7 @@ void DecodePBox(
 		}
 	}
 	//*************************************************************************
-    else if (code_type == PriorPBoxParameter_CodeType_CENTER_SIZE_ANGLE) {
+    else if (code_type == PriorPBoxParameter_CodeType_DIAG_CENTER_SIZE_ANGLE) {
 	float prior_dlt, prior_dlb, prior_drb, prior_drt;
 		float prior_center_x, prior_center_y;
 		float prior_alpha, prior_beta;
