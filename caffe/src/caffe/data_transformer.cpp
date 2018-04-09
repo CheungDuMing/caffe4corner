@@ -378,14 +378,14 @@ void DataTransformer<Dtype>::TransformAnnotation(
 				  NormalizedPBox* transformed_pbox = transformed_anno->mutable_pbox();
 				  transformed_pbox->CopyFrom(proj_pbox);
 				  if (do_mirror) {
-					  transformed_pbox->set_ltopx(1 - transformed_pbox->ltopx());
-					  transformed_pbox->set_ltopy(1 - transformed_pbox->ltopy());
-					  transformed_pbox->set_rtopx(1 - transformed_pbox->rtopx());
-					  transformed_pbox->set_rtopy(1 - transformed_pbox->rtopy());
-					  transformed_pbox->set_lbottomx(1 - transformed_pbox->lbottomx());
-					  transformed_pbox->set_lbottomy(1 - transformed_pbox->lbottomy());
-					  transformed_pbox->set_rbottomx(1 - transformed_pbox->rbottomx());
-					  transformed_pbox->set_rbottomy(1 - transformed_pbox->rbottomy());
+					  transformed_pbox->set_ltopx(1. - transformed_pbox->ltopx());
+					  transformed_pbox->set_ltopy(1. - transformed_pbox->ltopy());
+					  transformed_pbox->set_rtopx(1. - transformed_pbox->rtopx());
+					  transformed_pbox->set_rtopy(1. - transformed_pbox->rtopy());
+					  transformed_pbox->set_lbottomx(1. - transformed_pbox->lbottomx());
+					  transformed_pbox->set_lbottomy(1. - transformed_pbox->lbottomy());
+					  transformed_pbox->set_rbottomx(1. - transformed_pbox->rbottomx());
+					  transformed_pbox->set_rbottomy(1. - transformed_pbox->rbottomy());
 					  //Dtype temp = transformed_pbox->xmin();
 					  //transformed_pbox->set_xmin(1 - transformed_pbox->xmax());
 					  //transformed_pbox->set_xmax(1 - temp);
