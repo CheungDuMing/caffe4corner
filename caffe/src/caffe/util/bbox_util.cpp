@@ -876,6 +876,20 @@ bool MeetEmitConstraint(const NormalizedBBox& src_bbox,
     } else {
       return false;
     }
+  } else if (emit_type == EmitConstraint_EmitType_DIAG_CENTER) {
+      float p[8] = {ltx, lty, lbx, lby, lbx, lby, rtx, rty};
+      float area1 = PBoxSize<float>(p);
+      p[4] = rbx; p[5] = rby; p[0] = lbx; p[1] = lby;
+      float area2 = PBoxSize<float>(p);
+      float k = area2 / area1;
+    float x_center = ltx + (rbx - ltx) / (1+k);
+    float y_center = lty + (rby - lty) / (1+k);
+    if (x_center >= src_bbox.xmin() && x_center <= src_bbox.xmax() &&
+        y_center >= src_bbox.ymin() && y_center <= src_bbox.ymax()) {
+      return true;
+    } else {
+      return false;
+    }
   } else if (emit_type == EmitConstraint_EmitType_CORNER) {
       if(std::min(std::min(std::min(ltx, lbx), rbx), rtx)>= src_bbox.xmin()
               && std::min(std::min(std::min(lty, lby), rby), rty)>= src_bbox.ymin()
