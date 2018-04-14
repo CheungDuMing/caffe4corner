@@ -1,0 +1,8 @@
+src/caffe/solver.cpp: In instantiation of ‘void caffe::Solver<Dtype>::InitTrainNet() [with Dtype = float]’:
+src/caffe/solver.cpp:638:1:   required from here
+src/caffe/solver.cpp:83:13: warning: unused variable ‘num_train_nets’ [-Wunused-variable]
+   const int num_train_nets = param_.has_net() + param_.has_net_param() +
+             ^
+src/caffe/solver.cpp: In instantiation of ‘void caffe::Solver<Dtype>::InitTrainNet() [with Dtype = double]’:
+src/caffe/solver.cpp:638:1:   required from here
+src/caffe/solver.cpp:83:13: warning: unused variable ‘num_train_nets’ [-Wunused-variable]

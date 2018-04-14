@@ -1032,7 +1032,8 @@ def CreateMultiPBoxHead(net, data_layer="data", num_classes=[], from_layers=[],
 
         # Create prior generation layer.
         name = "{}_mpbox_priorpbox".format(from_layer)
-        net[name] = L.PriorPBox(net[from_layer], net[data_layer], min_size=min_size,
+        net[name] = L.PriorPBox(net[from_layer], net[data_layer],
+                                num_pboxes=numpbox_rotation, min_size=min_size,
                 clip=clip, variance=prior_variance, offset=offset)
         if max_size:
             net.update(name, {'max_size': max_size})

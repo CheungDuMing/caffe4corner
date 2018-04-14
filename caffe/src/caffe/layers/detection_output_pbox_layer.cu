@@ -70,7 +70,7 @@ void DetectionOutputPboxLayer<Dtype>::Forward_gpu(
       if (!share_location_) {
         cur_pbox_data += c * num_priors_ * 8;
       }
-      ApplyNMSFast(cur_pbox_data, cur_conf_data, num_priors_,
+      ApplyPboxNMSFast(cur_pbox_data, cur_conf_data, num_priors_,
           confidence_threshold_, nms_threshold_, eta_, top_k_, &(indices[c]));
       num_det += indices[c].size();
     }

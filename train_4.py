@@ -68,15 +68,16 @@ def AddExtraLayers(net, use_batchnorm=True, lr_mult=1):
 ### Modify the following parameters accordingly ###
 # The directory which contains the caffe code.
 # We assume you are running the script at the CAFFE_ROOT.
-caffe_root = '/home/cd/newcaffe/caffe/'
+caffe_root = '/home/cd/newcaffe/git/caffe4corner/caffe/'
 
 # Set true if you want to start training right after generating all files.
 run_soon = True
 # Set true if you want to load from most recently saved snapshot.
 # Otherwise, we will load from the pretrain_model defined below.
-resume_training = True
+# resume_training = True
+resume_training = False
 # If true, Remove old model files.
-remove_old_models = True
+remove_old_models = False
 
 # The database file for training data. Created by data/VOC0712/create_data.sh
 train_data = "/home/cd/newcaffe/lmdb/trainval_lmdb"
@@ -86,6 +87,9 @@ test_data = "/home/cd/newcaffe/lmdb/test_lmdb"
 resize_width = 300
 resize_height = 300
 resize = "{}x{}".format(resize_width, resize_height)
+do_mirror = False
+emit_type = caffe_pb2.EmitConstraint.CENTER
+# emit_type = caffe_pb2.EmitConstraint.DIAG_CENTER
 batch_sampler = [
         {
                 'sampler': {
@@ -173,7 +177,7 @@ batch_sampler = [
         },
         ]
 train_transform_param = {
-        'mirror': False,
+        'mirror': do_mirror,
         'mean_value': [104, 117, 123],
         'resize_param': {
                 'prob': 1,
@@ -206,7 +210,7 @@ train_transform_param = {
                 'max_expand_ratio': 4.0,
                 },
         'emit_constraint': {
-            'emit_type': caffe_pb2.EmitConstraint.CENTER,
+            'emit_type': emit_type,
             }
         }
 test_transform_param = {
@@ -268,7 +272,8 @@ share_location = True
 background_label_id=0
 train_on_diff_gt = True
 normalization_mode = P.Loss.VALID
-code_type = P.PriorPBox.CENTER_SIZE_ANGLE
+# code_type = P.PriorPBox.DIAG_CENTER_SIZE_ANGLE
+code_type = P.PriorPBox.TWO_CENTER_SIZE
 # code_type = P.PriorPBox.CORNER
 ignore_cross_boundary_pbox = False
 mining_type = P.MultiPBoxLoss.MAX_NEGATIVE
@@ -287,7 +292,7 @@ multipbox_loss_param = {
     'use_difficult_gt': train_on_diff_gt,
     'mining_type': mining_type,
     'neg_pos_ratio': neg_pos_ratio,
-    'neg_overlap': 0.1,
+    'neg_overlap': 0.9,
     'code_type': code_type,
     'ignore_cross_boundary_pbox': ignore_cross_boundary_pbox,
     }
@@ -321,7 +326,7 @@ aspect_ratios = [[2], [2, 3], [2, 3], [2, 3], [2], [2]]
 # L2 normalize conv4_3.
 normalizations = [20, -1, -1, -1, -1, -1]
 # variance used to encode/decode prior bboxes.
-if code_type == P.PriorPBox.CENTER_SIZE_ANGLE:
+if code_type == P.PriorPBox.DIAG_CENTER_SIZE_ANGLE:
     prior_variance = [0.1, 0.1, 0.2, 0.2, 0.2, 0.2, 0.1, 0.1]
 else:
     prior_variance = [0.1]
@@ -374,7 +379,7 @@ solver_param = {
     'momentum': 0.9,
     'iter_size': iter_size,
     'max_iter': 120000,
-    'snapshot': 500,
+    'snapshot': 10,
     'display': 10,
     'average_loss': 10,
     'type': "SGD",
@@ -384,7 +389,7 @@ solver_param = {
     'snapshot_after_train': True,
     # Test parameters
     'test_iter': [test_iter],
-    'test_interval': 100,
+    'test_interval': 10,
     'eval_type': "detection",
     'show_per_class_result': True,
     'ap_version': "11point",
@@ -413,7 +418,7 @@ det_out_pbox_param = {
 det_pbox_eval_param = {
     'num_classes': num_classes,
     'background_label_id': background_label_id,
-    'overlap_threshold': 0.5,
+    'overlap_threshold': -0.5,
     'evaluate_difficult_gt': False,
     'name_size_file': name_size_file,
     }

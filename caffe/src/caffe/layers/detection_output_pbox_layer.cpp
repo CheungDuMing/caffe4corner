@@ -184,7 +184,7 @@ namespace caffe {
 	template <typename Dtype>
 	void DetectionOutputPboxLayer<Dtype>::Forward_cpu(
 		const vector<Blob<Dtype>*>& bottom, const vector<Blob<Dtype>*>& top) {
-		LOG(FATAL) << "success";
+		LOG(FATAL) << "detectionOutputPbox.cpp success";
 		const Dtype* loc_data = bottom[0]->cpu_data();
 		const Dtype* conf_data = bottom[1]->cpu_data();
 		const Dtype* prior_data = bottom[2]->cpu_data();

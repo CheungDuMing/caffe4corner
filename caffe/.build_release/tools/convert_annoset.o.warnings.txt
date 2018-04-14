@@ -1,0 +1,4 @@
+tools/convert_annoset.cpp: In function ‘int main(int, char**)’:
+tools/convert_annoset.cpp:183:38: warning: ‘type’ may be used uninitialized in this function [-Wmaybe-uninitialized]
+           name_to_label, &anno_datum);
+                                      ^

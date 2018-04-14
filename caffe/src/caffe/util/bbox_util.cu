@@ -485,8 +485,15 @@ __global__ void DecodePBoxesKernel(const int nthreads,
         decode_dlb = expf(prior_data[vi + 3] * lbottomy) * prior_lbrt;
         decode_drb = expf(prior_data[vi + 4] * rbottomx) * prior_ltrb;
         decode_drt = expf(prior_data[vi + 5] * rbottomy) * prior_lbrt;
-        decode_alpha = fmod(double(prior_data[vi + 6] * rtopx) , (2.f * pai)) + prior_alpha;
-        decode_beta = fmod(double(prior_data[vi + 7] * rtopy) , (2.f * pai)) + prior_beta;
+
+        /*decode_center_x = prior_data[vi] * ltopx + prior_center_x;// xmin * prior_width + prior_center_x;*/
+        /*decode_center_y = prior_data[vi + 1] * ltopy + prior_center_y;// ymin * prior_height + prior_center_y;*/
+        /*decode_dlt = (prior_data[vi + 2]) * prior_ltrb;*/
+        /*decode_dlb = (prior_data[vi + 3]) * prior_lbrt;*/
+        /*decode_drb = (prior_data[vi + 4]) * prior_ltrb;*/
+        /*decode_drt = (prior_data[vi + 5]) * prior_lbrt;*/
+        /*decode_alpha = fmod(double(prior_data[vi + 6] * rtopx) , (2.f * pai)) + prior_alpha;*/
+        /*decode_beta = fmod(double(prior_data[vi + 7] * rtopy) , (2.f * pai)) + prior_beta;*/
 
         // decode_bbox_center_x =
         //   prior_data[vi] * xmin * prior_width + prior_center_x;
@@ -498,16 +505,14 @@ __global__ void DecodePBoxesKernel(const int nthreads,
         //   exp(prior_data[vi + 3] * ymax) * prior_height;
       }
 				// float ltx, lty, lbx, lby, rbx, rby, rtx, rty;
-				const Dtype ltx = decode_center_x - decode_dlt * cosf(decode_alpha - decode_beta);
-				const Dtype lty = decode_center_y + decode_dlt * sinf(decode_alpha - decode_beta);
-				const Dtype lbx = decode_center_x - decode_dlb * cosf(decode_beta);
-				const Dtype lby = decode_center_y - decode_dlb * sinf(decode_beta);
-				const Dtype rbx = decode_center_x + decode_drb * cosf(decode_alpha - decode_beta);
-				const Dtype rby = decode_center_y - decode_drb * sinf(decode_alpha - decode_beta);
-				const Dtype rtx = decode_center_x + decode_drt * cosf(decode_beta);
-				const Dtype rty = decode_center_y + decode_drt * sinf(decode_beta);
-
-
+        const Dtype ltx = decode_center_x - decode_dlt * cosf(decode_alpha - decode_beta);
+        const Dtype lty = decode_center_y + decode_dlt * sinf(decode_alpha - decode_beta);
+        const Dtype lbx = decode_center_x - decode_dlb * cosf(decode_beta);
+        const Dtype lby = decode_center_y - decode_dlb * sinf(decode_beta);
+        const Dtype rbx = decode_center_x + decode_drb * cosf(decode_alpha - decode_beta);
+        const Dtype rby = decode_center_y - decode_drb * sinf(decode_alpha - decode_beta);
+        const Dtype rtx = decode_center_x + decode_drt * cosf(decode_beta);
+        const Dtype rty = decode_center_y + decode_drt * sinf(decode_beta);
       switch (i) {
         case 0:
           pbox_data[index] = ltx;
@@ -516,16 +521,16 @@ __global__ void DecodePBoxesKernel(const int nthreads,
           pbox_data[index] = lty;
           break;
         case 2:
-          pbox_data[index] = lbottomx;
+          pbox_data[index] = lbx;
           break;
         case 3:
-          pbox_data[index] = lbottomy;
+          pbox_data[index] = lby;
           break;
         case 4:
-          pbox_data[index] = rbottomx;
+          pbox_data[index] = rbx;
           break;
         case 5:
-          pbox_data[index] = rbottomy;
+          pbox_data[index] = rby;
           break;
         case 6:
           pbox_data[index] = rtx;
@@ -535,29 +540,96 @@ __global__ void DecodePBoxesKernel(const int nthreads,
           break;
         
       }
-    }/* else if (code_type == PriorBoxParameter_CodeType_CORNER_SIZE) {
-      const Dtype p_xmin = prior_data[pi];
-      const Dtype p_ymin = prior_data[pi + 1];
-      const Dtype p_xmax = prior_data[pi + 2];
-      const Dtype p_ymax = prior_data[pi + 3];
-      const Dtype prior_width = p_xmax - p_xmin;
-      const Dtype prior_height = p_ymax - p_ymin;
-      Dtype p_size;
-      if (i == 0 || i == 2) {
-        p_size = prior_width;
-      } else {
-        p_size = prior_height;
-      }
+    } else if (code_type == PriorPBoxParameter_CodeType_TWO_CENTER_SIZE) {
+
+        const Dtype prior_centertx = prior_data[pi+6];//.rtopx();
+        const Dtype prior_centerty = prior_data[pi+1];//.ltopy();
+        const Dtype prior_centerbx = prior_data[pi+2];//.lbottomx();
+        const Dtype prior_centerby = prior_data[pi+5];//.rbottomy();
+
+        const Dtype prior_dltc = prior_data[pi]- prior_centertx;
+        const Dtype prior_drtc = prior_data[pi+7]- prior_centerty;
+        const Dtype prior_dlbc = prior_data[pi+3]- prior_centerby;
+        const Dtype prior_drbc = prior_data[pi+4]- prior_centerbx;
+
+      const Dtype ltopx = loc_data[index - i];
+      const Dtype ltopy = loc_data[index - i + 1];
+      const Dtype lbottomx = loc_data[index - i + 2];
+      const Dtype lbottomy = loc_data[index - i + 3];
+      const Dtype rbottomx = loc_data[index - i + 4];
+      const Dtype rbottomy = loc_data[index - i + 5];
+      const Dtype rtopx = loc_data[index - i + 6];
+      const Dtype rtopy = loc_data[index - i + 7];
+
+      Dtype decode_centertx, decode_centerty, decode_centerbx, decode_centerby;
+      Dtype decode_dltc, decode_dlbc, decode_drbc, decode_drtc;
+
       if (variance_encoded_in_target) {
-        // variance is encoded in target, we simply need to add the offset
-        // predictions.
-        bbox_data[index] = prior_data[pi + i] + loc_data[index] * p_size;
+         /*variance is encoded in target, we simply need to add the offset*/
+     decode_centertx = prior_centertx + ltopx; 
+     decode_centerty = prior_centerty + ltopy; 
+     decode_centerbx = prior_centerbx + lbottomx; 
+     decode_centerby = prior_centerby + lbottomy;
+     decode_dltc = prior_dltc + rbottomx; 
+     decode_dlbc = prior_dlbc + rbottomy;
+     decode_drbc = prior_drbc + rtopx; 
+     decode_drtc = prior_drtc + rtopy; 
+       /*predictions.*/
       } else {
-        // variance is encoded in bbox, we need to scale the offset accordingly.
-        bbox_data[index] =
-          prior_data[pi + i] + loc_data[index] * prior_data[vi + i] * p_size;
-      }
-    }  */
+     decode_centertx = prior_centertx + prior_data[vi] * ltopx; 
+     decode_centerty = prior_centerty + prior_data[vi+1] * ltopy; 
+     decode_centerbx = prior_centerbx + prior_data[vi+2] * lbottomx; 
+     decode_centerby = prior_centerby + prior_data[vi+3] * lbottomy;
+     decode_dltc = prior_dltc +(prior_data[vi+4] * rbottomx); 
+     decode_dlbc = prior_dlbc +(prior_data[vi+5] * rbottomy);
+     decode_drbc = prior_drbc +(prior_data[vi+6] * rtopx); 
+     decode_drtc = prior_drtc +(prior_data[vi+7] * rtopy); 
+ 
+     decode_centertx = prior_centertx + prior_data[vi] * prior_dltc * ltopx; 
+     decode_centerty = prior_centerty + prior_data[vi+1] * prior_drtc * ltopy; 
+     decode_centerbx = prior_centerbx + prior_data[vi+2] * prior_drbc * lbottomx; 
+     decode_centerby = prior_centerby + prior_data[vi+3] * prior_dlbc * lbottomy;
+     decode_dltc = prior_dltc *exp(prior_data[vi+4] * rbottomx); 
+     decode_dlbc = prior_dlbc *exp(prior_data[vi+5] * rbottomy);
+     decode_drbc = prior_drbc *exp(prior_data[vi+6] * rtopx); 
+     decode_drtc = prior_drtc *exp(prior_data[vi+7] * rtopy); 
+     }
+	    const Dtype ltx = decode_centertx + decode_dltc;
+		const Dtype lty = decode_centerty ;
+		const Dtype lbx = decode_centerbx ;
+		const Dtype lby = decode_centerby + decode_dlbc;
+		const Dtype rbx = decode_centerbx + decode_drbc;
+		const Dtype rby = decode_centerby ;
+		const Dtype rtx = decode_centertx ;
+		const Dtype rty = decode_centerty + decode_drtc;
+      switch (i) {
+        case 0:
+          pbox_data[index] = ltx;
+          break;
+        case 1:
+          pbox_data[index] = lty;
+          break;
+        case 2:
+          pbox_data[index] = lbx;
+          break;
+        case 3:
+          pbox_data[index] = lby;
+          break;
+        case 4:
+          pbox_data[index] = rbx;
+          break;
+        case 5:
+          pbox_data[index] = rby;
+          break;
+        case 6:
+          pbox_data[index] = rtx;
+          break;
+        case 7:
+          pbox_data[index] = rty;
+          break;
+
+        }  
+    }
 	else {
       // Unknown code type.
     }

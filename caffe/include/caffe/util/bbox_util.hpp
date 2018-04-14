@@ -93,6 +93,10 @@ void ClipPBox(const NormalizedPBox& pbox, NormalizedPBox* clip_pbox);
 void ClipBBox(const NormalizedBBox& bbox, const float height, const float width,
               NormalizedBBox* clip_bbox);
 
+void ClipPBox(const NormalizedBBox& pbox, const float height, const float width,
+              NormalizedPBox* clip_pbox);
+
+
 // Scale the NormalizedBBox w.r.t. height and width.
 void ScaleBBox(const NormalizedBBox& bbox, const int height, const int width,
                NormalizedBBox* scale_bbox);
@@ -651,6 +655,11 @@ template <typename Dtype>
 void ApplyNMSFast(const Dtype* bboxes, const Dtype* scores, const int num,
       const float score_threshold, const float nms_threshold,
       const float eta, const int top_k, vector<int>* indices);
+template <typename Dtype>
+void ApplyPboxNMSFast(const Dtype* pboxes, const Dtype* scores, const int num,
+      const float score_threshold, const float nms_threshold,
+      const float eta, const int top_k, vector<int>* indices);
+
 
 // Compute cumsum of a set of pairs.
 void CumSum(const vector<pair<float, int> >& pairs, vector<int>* cumsum);

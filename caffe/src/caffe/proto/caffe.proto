@@ -1614,9 +1614,10 @@ message PriorPBoxParameter {
     DIAG_CENTER_SIZE_ANGLE = 2;
     CENTER_SIZE_ANGLE = 4;
     CORNER_SIZE = 3;
+    TWO_CENTER_SIZE = 5;
   }
   // number of pboxes per aspect radio.
-  optional uint32 num_pboxes = 14 [default = 8];
+  optional uint32 num_pboxes = 14 [default = 4];
   // Minimum box size (in pixels). Required!
   repeated float min_size = 1;
   // Maximum box size (in pixels). Required!

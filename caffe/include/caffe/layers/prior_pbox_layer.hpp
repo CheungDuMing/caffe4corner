@@ -67,6 +67,7 @@ namespace caffe {
 		vector<float> max_sizes_;
 		vector<float> aspect_ratios_;
 		bool flip_;
+        int num_pboxes_rotation;
 		int num_priors_;
 		bool clip_;
 		vector<float> variance_;

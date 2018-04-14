@@ -14,6 +14,7 @@ namespace caffe {
 		const vector<Blob<Dtype>*>& top) {
 		const PriorPBoxParameter& prior_pbox_param =
 			this->layer_param_.prior_pbox_param();
+        num_pboxes_rotation = prior_pbox_param.num_pboxes();
 		CHECK_GT(prior_pbox_param.min_size_size(), 0) << "must provide min_size.";
 		for (int i = 0; i < prior_pbox_param.min_size_size(); ++i) {
 			min_sizes_.push_back(prior_pbox_param.min_size(i));
@@ -38,14 +39,14 @@ namespace caffe {
 				}
 			}
 		}
-		num_priors_ = aspect_ratios_.size() * min_sizes_.size() * 4;
+		num_priors_ = aspect_ratios_.size() * min_sizes_.size() * num_pboxes_rotation;
 		if (prior_pbox_param.max_size_size() > 0) {
 			CHECK_EQ(prior_pbox_param.min_size_size(), prior_pbox_param.max_size_size());
 			for (int i = 0; i < prior_pbox_param.max_size_size(); ++i) {
 				max_sizes_.push_back(prior_pbox_param.max_size(i));
 				CHECK_GT(max_sizes_[i], min_sizes_[i])
 					<< "max_size must be greater than min_size.";
-				num_priors_ += 4;
+				num_priors_ += num_pboxes_rotation;//4;
 			}
 		}
 		clip_ = prior_pbox_param.clip();
@@ -186,6 +187,7 @@ namespace caffe {
 					// rtopy
 					top_data[idx++] = temp8 = (center_y - box_height / 2.) / img_height;
 
+                    if(num_pboxes_rotation == 4) {
                     //4 pboxes in spaces
                     for (float i = 1. ; i < 3. ; i = i + 1. )
                     {
@@ -228,48 +230,51 @@ namespace caffe {
                         // rtopy
                         top_data[idx++] = temp8 * cos(i * pi / 2. ) + temp7 * sin(i* pi / 2. );
                     }
-					//12 pboxes in spaces
-                    //for (float i = 1. ; i < 7. ; i = i + 1. )
-                    //{
-                        //// ltopx
-                        //top_data[idx++] = temp1 * cos(i* pi / 6. ) + temp2 * sin(i* pi / 6. );
-                        //// ltopy
-                        //top_data[idx++] = temp2 * cos(i * pi / 6. ) - temp1 * sin(i* pi / 6. );
-                        ////lbottomx
-                        //top_data[idx++] = temp3 * cos(i* pi / 6. ) + temp4 * sin(i* pi / 6. );
-                        ////lbottomy
-                        //top_data[idx++] = temp4 * cos(i * pi / 6. ) - temp3 * sin(i* pi / 6. );
-                        //// rbottomx
-                        //top_data[idx++] = temp5 * cos(i* pi / 6. ) + temp6 * sin(i* pi / 6. );
-                        //// rbottomy
-                        //top_data[idx++] = temp6 * cos(i * pi / 6. ) - temp5 * sin(i* pi / 6. );
-                        //// rtopx
-                        //top_data[idx++] = temp7 * cos(i* pi / 6. ) + temp8 * sin(i* pi / 6. );
-                        //// rtopy
-                        //top_data[idx++] = temp8 * cos(i * pi / 6. ) - temp7 * sin(i* pi / 6. );
-                    /*}*/
+                    }
+                    if(num_pboxes_rotation == 12) {
+                    //12 pboxes in spaces
+                    for (float i = 1. ; i < 7. ; i = i + 1. )
+                    {
+                        // ltopx
+                        top_data[idx++] = temp1 * cos(i* pi / 6. ) + temp2 * sin(i* pi / 6. );
+                        // ltopy
+                        top_data[idx++] = temp2 * cos(i * pi / 6. ) - temp1 * sin(i* pi / 6. );
+                        //lbottomx
+                        top_data[idx++] = temp3 * cos(i* pi / 6. ) + temp4 * sin(i* pi / 6. );
+                        //lbottomy
+                        top_data[idx++] = temp4 * cos(i * pi / 6. ) - temp3 * sin(i* pi / 6. );
+                        // rbottomx
+                        top_data[idx++] = temp5 * cos(i* pi / 6. ) + temp6 * sin(i* pi / 6. );
+                        // rbottomy
+                        top_data[idx++] = temp6 * cos(i * pi / 6. ) - temp5 * sin(i* pi / 6. );
+                        // rtopx
+                        top_data[idx++] = temp7 * cos(i* pi / 6. ) + temp8 * sin(i* pi / 6. );
+                        // rtopy
+                        top_data[idx++] = temp8 * cos(i * pi / 6. ) - temp7 * sin(i* pi / 6. );
+                    }
 
-                    //for (float j = 7. ; j < 12. ; j = j + 1. )
-                    //{
-                        //float i;
-                        //i = 12. - j;
-                        //// ltopx
-                        //top_data[idx++] = temp1 * cos(i* pi / 6. ) - temp2 * sin(i* pi / 6. );
-                        //// ltopy
-                        //top_data[idx++] = temp2 * cos(i * pi / 6. ) + temp1 * sin(i* pi / 6. );
-                        ////lbottomx
-                        //top_data[idx++] = temp3 * cos(i* pi / 6. ) - temp4 * sin(i* pi / 6. );
-                        ////lbottomy
-                        //top_data[idx++] = temp4 * cos(i * pi / 6. ) + temp3 * sin(i* pi / 6. );
-                        //// rbottomx
-                        //top_data[idx++] = temp5 * cos(i* pi / 6. ) - temp6 * sin(i* pi / 6. );
-                        //// rbottomy
-                        //top_data[idx++] = temp6 * cos(i * pi / 6. ) + temp5 * sin(i* pi / 6. );
-                        //// rtopx
-                        //top_data[idx++] = temp7 * cos(i* pi / 6. ) - temp8 * sin(i* pi / 6. );
-                        //// rtopy
-                        //top_data[idx++] = temp8 * cos(i * pi / 6. ) + temp7 * sin(i* pi / 6. );
-                    /*}*/
+                    for (float j = 7. ; j < 12. ; j = j + 1. )
+                    {
+                        float i;
+                        i = 12. - j;
+                        // ltopx
+                        top_data[idx++] = temp1 * cos(i* pi / 6. ) - temp2 * sin(i* pi / 6. );
+                        // ltopy
+                        top_data[idx++] = temp2 * cos(i * pi / 6. ) + temp1 * sin(i* pi / 6. );
+                        //lbottomx
+                        top_data[idx++] = temp3 * cos(i* pi / 6. ) - temp4 * sin(i* pi / 6. );
+                        //lbottomy
+                        top_data[idx++] = temp4 * cos(i * pi / 6. ) + temp3 * sin(i* pi / 6. );
+                        // rbottomx
+                        top_data[idx++] = temp5 * cos(i* pi / 6. ) - temp6 * sin(i* pi / 6. );
+                        // rbottomy
+                        top_data[idx++] = temp6 * cos(i * pi / 6. ) + temp5 * sin(i* pi / 6. );
+                        // rtopx
+                        top_data[idx++] = temp7 * cos(i* pi / 6. ) - temp8 * sin(i* pi / 6. );
+                        // rtopy
+                        top_data[idx++] = temp8 * cos(i * pi / 6. ) + temp7 * sin(i* pi / 6. );
+                    }
+                    }
 
 					if (max_sizes_.size() > 0) {
 						CHECK_EQ(min_sizes_.size(), max_sizes_.size());
@@ -293,6 +298,7 @@ namespace caffe {
 						// rtopy
 						top_data[idx++] = temp8 = (center_y - box_height / 2.) / img_height;
 
+                        if(num_pboxes_rotation == 4) {
 						//4 pboxes in spaces
 						for (float i = 1.0; i < 3.f; i = i + 1.f)
                         {
@@ -335,49 +341,52 @@ namespace caffe {
                             // rtopy
                             top_data[idx++] = temp8 * cos(i * pi / 2.f) + temp7 * sin(i* pi / 2.f);
                         }
+                        }
 
-						//for (float i = 1.0; i < 7.f; i = i + 1.f)
-						//{
-							//// ltopx
-							//top_data[idx++] = temp1 * cos(i* pi / 6.f) + temp2 * sin(i* pi / 6.f);
-							//// ltopy
-							//top_data[idx++] = temp2 * cos(i * pi / 6.f) - temp1 * sin(i* pi / 6.f);
-							////lbottomx
-							//top_data[idx++] = temp3 * cos(i* pi / 6.f) + temp4 * sin(i* pi / 6.f);
-							////lbottomy
-							//top_data[idx++] = temp4 * cos(i * pi / 6.f) - temp3 * sin(i* pi / 6.f);
-							//// rbottomx
-							//top_data[idx++] = temp5 * cos(i* pi / 6.f) + temp6 * sin(i* pi / 6.f);
-							//// rbottomy
-							//top_data[idx++] = temp6 * cos(i * pi / 6.f) - temp5 * sin(i* pi / 6.f);
-							//// rtopx
-							//top_data[idx++] = temp7 * cos(i* pi / 6.f) + temp8 * sin(i* pi / 6.f);
-							//// rtopy
-							//top_data[idx++] = temp8 * cos(i * pi / 6.f) - temp7 * sin(i* pi / 6.f);
-						//}
+                        if(num_pboxes_rotation == 12) {
+                        for (float i = 1.0; i < 7.f; i = i + 1.f)
+                        {
+                            // ltopx
+                            top_data[idx++] = temp1 * cos(i* pi / 6.f) + temp2 * sin(i* pi / 6.f);
+                            // ltopy
+                            top_data[idx++] = temp2 * cos(i * pi / 6.f) - temp1 * sin(i* pi / 6.f);
+                            //lbottomx
+                            top_data[idx++] = temp3 * cos(i* pi / 6.f) + temp4 * sin(i* pi / 6.f);
+                            //lbottomy
+                            top_data[idx++] = temp4 * cos(i * pi / 6.f) - temp3 * sin(i* pi / 6.f);
+                            // rbottomx
+                            top_data[idx++] = temp5 * cos(i* pi / 6.f) + temp6 * sin(i* pi / 6.f);
+                            // rbottomy
+                            top_data[idx++] = temp6 * cos(i * pi / 6.f) - temp5 * sin(i* pi / 6.f);
+                            // rtopx
+                            top_data[idx++] = temp7 * cos(i* pi / 6.f) + temp8 * sin(i* pi / 6.f);
+                            // rtopy
+                            top_data[idx++] = temp8 * cos(i * pi / 6.f) - temp7 * sin(i* pi / 6.f);
+                        }
 
-						//for (float j = 7.f; j < 12.f; j = j + 1.f)
-						//{
-                            //float i;
-							//i = 12.f - j;
-							//// ltopx
-							//top_data[idx++] = temp1 * cos(i* pi / 6.f) - temp2 * sin(i* pi / 6.f);
-							//// ltopy
-							//top_data[idx++] = temp2 * cos(i * pi / 6.f) + temp1 * sin(i* pi / 6.f);
-							////lbottomx
-							//top_data[idx++] = temp3 * cos(i* pi / 6.f) - temp4 * sin(i* pi / 6.f);
-							////lbottomy
-							//top_data[idx++] = temp4 * cos(i * pi / 6.f) + temp3 * sin(i* pi / 6.f);
-							//// rbottomx
-							//top_data[idx++] = temp5 * cos(i* pi / 6.f) - temp6 * sin(i* pi / 6.f);
-							//// rbottomy
-							//top_data[idx++] = temp6 * cos(i * pi / 6.f) + temp5 * sin(i* pi / 6.f);
-							//// rtopx
-							//top_data[idx++] = temp7 * cos(i* pi / 6.f) - temp8 * sin(i* pi / 6.f);
-							//// rtopy
-							//top_data[idx++] = temp8 * cos(i * pi / 6.f) + temp7 * sin(i* pi / 6.f);
-						/*}*/
-					}
+                        for (float j = 7.f; j < 12.f; j = j + 1.f)
+                        {
+                            float i;
+                            i = 12.f - j;
+                            // ltopx
+                            top_data[idx++] = temp1 * cos(i* pi / 6.f) - temp2 * sin(i* pi / 6.f);
+                            // ltopy
+                            top_data[idx++] = temp2 * cos(i * pi / 6.f) + temp1 * sin(i* pi / 6.f);
+                            //lbottomx
+                            top_data[idx++] = temp3 * cos(i* pi / 6.f) - temp4 * sin(i* pi / 6.f);
+                            //lbottomy
+                            top_data[idx++] = temp4 * cos(i * pi / 6.f) + temp3 * sin(i* pi / 6.f);
+                            // rbottomx
+                            top_data[idx++] = temp5 * cos(i* pi / 6.f) - temp6 * sin(i* pi / 6.f);
+                            // rbottomy
+                            top_data[idx++] = temp6 * cos(i * pi / 6.f) + temp5 * sin(i* pi / 6.f);
+                            // rtopx
+                            top_data[idx++] = temp7 * cos(i* pi / 6.f) - temp8 * sin(i* pi / 6.f);
+                            // rtopy
+                            top_data[idx++] = temp8 * cos(i * pi / 6.f) + temp7 * sin(i* pi / 6.f);
+                        }
+                    }
+                    }
 
 					// rest of priors
 					for (int r = 0; r < aspect_ratios_.size(); ++r) {
@@ -405,6 +414,7 @@ namespace caffe {
 						// rtopy
 						top_data[idx++] = temp8 = (center_y - box_height / 2.) / img_height;
 
+                        if(num_pboxes_rotation == 4) {
 						//4 pboxes in spaces
 						for (float i = 1.0; i < 3.f; i = i + 1.f)
                         {
@@ -447,53 +457,56 @@ namespace caffe {
                             // rtopy
                             top_data[idx++] = temp8 * cos(i * pi / 2.f) + temp7 * sin(i* pi / 2.f);
                         }
+                        }
 
 
-					   /* for (float i = 1.0; i < 7.f; i = i + 1.f)*/
-						//{
-							//// ltopx
-							//top_data[idx++] = temp1 * cos(i* pi / 6.f) + temp2 * sin(i* pi / 6.f);
-							//// ltopy
-							//top_data[idx++] = temp2 * cos(i * pi / 6.f) - temp1 * sin(i* pi / 6.f);
-							////lbottomx
-							//top_data[idx++] = temp3 * cos(i* pi / 6.f) + temp4 * sin(i* pi / 6.f);
-							////lbottomy
-							//top_data[idx++] = temp4 * cos(i * pi / 6.f) - temp3 * sin(i* pi / 6.f);
-							//// rbottomx
-							//top_data[idx++] = temp5 * cos(i* pi / 6.f) + temp6 * sin(i* pi / 6.f);
-							//// rbottomy
-							//top_data[idx++] = temp6 * cos(i * pi / 6.f) - temp5 * sin(i* pi / 6.f);
-							//// rtopx
-							//top_data[idx++] = temp7 * cos(i* pi / 6.f) + temp8 * sin(i* pi / 6.f);
-							//// rtopy
-							//top_data[idx++] = temp8 * cos(i * pi / 6.f) - temp7 * sin(i* pi / 6.f);
-						//}
+                        if(num_pboxes_rotation == 12) {
+                        for (float i = 1.0; i < 7.f; i = i + 1.f)
+                        {
+                            // ltopx
+                            top_data[idx++] = temp1 * cos(i* pi / 6.f) + temp2 * sin(i* pi / 6.f);
+                            // ltopy
+                            top_data[idx++] = temp2 * cos(i * pi / 6.f) - temp1 * sin(i* pi / 6.f);
+                            //lbottomx
+                            top_data[idx++] = temp3 * cos(i* pi / 6.f) + temp4 * sin(i* pi / 6.f);
+                            //lbottomy
+                            top_data[idx++] = temp4 * cos(i * pi / 6.f) - temp3 * sin(i* pi / 6.f);
+                            // rbottomx
+                            top_data[idx++] = temp5 * cos(i* pi / 6.f) + temp6 * sin(i* pi / 6.f);
+                            // rbottomy
+                            top_data[idx++] = temp6 * cos(i * pi / 6.f) - temp5 * sin(i* pi / 6.f);
+                            // rtopx
+                            top_data[idx++] = temp7 * cos(i* pi / 6.f) + temp8 * sin(i* pi / 6.f);
+                            // rtopy
+                            top_data[idx++] = temp8 * cos(i * pi / 6.f) - temp7 * sin(i* pi / 6.f);
+                        }
 
-						//for (float j = 7.f; j < 12.f; j = j + 1.f)
-						//{
-                            //float i;
-							//i = 12.f - j;
-							//// ltopx
-							//top_data[idx++] = temp1 * cos(i* pi / 6.f) - temp2 * sin(i* pi / 6.f);
-							//// ltopy
-							//top_data[idx++] = temp2 * cos(i * pi / 6.f) + temp1 * sin(i* pi / 6.f);
-							////lbottomx
-							//top_data[idx++] = temp3 * cos(i* pi / 6.f) - temp4 * sin(i* pi / 6.f);
-							////lbottomy
-							//top_data[idx++] = temp4 * cos(i * pi / 6.f) + temp3 * sin(i* pi / 6.f);
-							//// rbottomx
-							//top_data[idx++] = temp5 * cos(i* pi / 6.f) - temp6 * sin(i* pi / 6.f);
-							//// rbottomy
-							//top_data[idx++] = temp6 * cos(i * pi / 6.f) + temp5 * sin(i* pi / 6.f);
-							//// rtopx
-							//top_data[idx++] = temp7 * cos(i* pi / 6.f) - temp8 * sin(i* pi / 6.f);
-							//// rtopy
-							//top_data[idx++] = temp8 * cos(i * pi / 6.f) + temp7 * sin(i* pi / 6.f);
-						/*}*/
-					}
-				}
-			}
-		}
+                        for (float j = 7.f; j < 12.f; j = j + 1.f)
+                        {
+                            float i;
+                            i = 12.f - j;
+                            // ltopx
+                            top_data[idx++] = temp1 * cos(i* pi / 6.f) - temp2 * sin(i* pi / 6.f);
+                            // ltopy
+                            top_data[idx++] = temp2 * cos(i * pi / 6.f) + temp1 * sin(i* pi / 6.f);
+                            //lbottomx
+                            top_data[idx++] = temp3 * cos(i* pi / 6.f) - temp4 * sin(i* pi / 6.f);
+                            //lbottomy
+                            top_data[idx++] = temp4 * cos(i * pi / 6.f) + temp3 * sin(i* pi / 6.f);
+                            // rbottomx
+                            top_data[idx++] = temp5 * cos(i* pi / 6.f) - temp6 * sin(i* pi / 6.f);
+                            // rbottomy
+                            top_data[idx++] = temp6 * cos(i * pi / 6.f) + temp5 * sin(i* pi / 6.f);
+                            // rtopx
+                            top_data[idx++] = temp7 * cos(i* pi / 6.f) - temp8 * sin(i* pi / 6.f);
+                            // rtopy
+                            top_data[idx++] = temp8 * cos(i * pi / 6.f) + temp7 * sin(i* pi / 6.f);
+                        }
+                        }
+                    }
+                }
+            }
+        }
 		//LOG(INFO) << "success";
 		// clip the prior's coordidate such that it is within [0, 1]
 		if (clip_) {

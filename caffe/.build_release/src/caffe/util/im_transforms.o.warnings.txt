@@ -1,0 +1,10 @@
+src/caffe/util/im_transforms.cpp: In function ‘void caffe::UpdatePBoxByResizePolicy(const caffe::ResizeParameter&, int, int, caffe::NormalizedPBox*)’:
+src/caffe/util/im_transforms.cpp:105:8: warning: unused variable ‘orig_aspect’ [-Wunused-variable]
+  float orig_aspect = static_cast<float>(old_width) / old_height;
+        ^
+src/caffe/util/im_transforms.cpp:106:8: warning: unused variable ‘new_aspect’ [-Wunused-variable]
+  float new_aspect = new_width / new_height;
+        ^
+src/caffe/util/im_transforms.cpp:120:8: warning: unused variable ‘padding’ [-Wunused-variable]
+  float padding;
+        ^

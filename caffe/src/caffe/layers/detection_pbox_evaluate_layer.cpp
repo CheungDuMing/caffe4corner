@@ -18,7 +18,7 @@ void DetectionPboxEvaluateLayer<Dtype>::LayerSetUp(
   num_classes_ = detection_pbox_evaluate_param.num_classes();
   background_label_id_ = detection_pbox_evaluate_param.background_label_id();
   overlap_threshold_ = detection_pbox_evaluate_param.overlap_threshold();
-  CHECK_GT(overlap_threshold_, 0.) << "overlap_threshold must be non negative.";
+  CHECK_LT(overlap_threshold_, 0.) << "overlap_threshold must be negative.";
   evaluate_difficult_gt_ = detection_pbox_evaluate_param.evaluate_difficult_gt();
   if (detection_pbox_evaluate_param.has_name_size_file()) {
     string name_size_file = detection_pbox_evaluate_param.name_size_file();
@@ -200,17 +200,30 @@ void DetectionPboxEvaluateLayer<Dtype>::Forward_cpu(
                          resize_param_, &(pboxes[i]));
             }
             // Compare with each ground truth bbox.
-            float overlap_max = -1;
+            float overlap_max = -1000;
             int jmax = -1;
             for (int j = 0; j < gt_pboxes.size(); ++j) {
               float overlap = JaccardOverlapPbox(pboxes[i], gt_pboxes[j],
                                              use_normalized_pbox_);
+             /* LOG(INFO) << pboxes[i].ltopx() << " " << pboxes[i].ltopy();*/
+              //LOG(INFO) << pboxes[i].lbottomx() << " " << pboxes[i].lbottomy();
+              //LOG(INFO) << pboxes[i].rbottomx() << " " << pboxes[i].rbottomy();
+              /*LOG(INFO) << pboxes[i].rtopx() << " " << pboxes[i].rtopy();*/
+/*              if (PBoxSize(pboxes[i]) > 0 && PBoxSize(gt_pboxes[i])>0.1) {*/
+              //LOG(INFO)<< overlap;
+              //LOG(INFO) << "pboxsize: " << PBoxSize(pboxes[i]);
+              //LOG(INFO) << "gt_pboxsize: " << PBoxSize(gt_pboxes[i]);
+
+              /*}*/
+              //if(overlap > 0) LOG(FATAL) << "success";
               if (overlap > overlap_max) {
                 overlap_max = overlap;
                 jmax = j;
               }
             }
+               //if(overlap_max > -1000) LOG(INFO) << overlap_max;
             if (overlap_max >= overlap_threshold_) {
+                LOG(INFO)<< "success!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!";
               if (evaluate_difficult_gt_ ||
                   (!evaluate_difficult_gt_ && !gt_pboxes[jmax].difficult())) {
                 if (!visited[jmax]) {
