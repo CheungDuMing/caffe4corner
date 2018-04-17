@@ -4398,7 +4398,7 @@ void ApplyNMSFast(const vector<NormalizedPBox>& pboxes,
 			indices->push_back(idx);
 		}
 		score_index_vec.erase(score_index_vec.begin());
-		if (keep && eta < 1 && adaptive_threshold > 0.5) {
+		if (keep && eta < 1 && adaptive_threshold > 0.9) {
 			adaptive_threshold *= eta;
 		}
 	}
@@ -4477,7 +4477,7 @@ void ApplyPboxNMSFast(const Dtype* pboxes, const Dtype* scores, const int num,
 			indices->push_back(idx);
 		}
 		score_index_vec.erase(score_index_vec.begin());
-		if (keep && eta < 1 && adaptive_threshold > 0.5) {
+		if (keep && eta < 1 && adaptive_threshold > 0.9) {
 			adaptive_threshold *= eta;
 		}
 	}
@@ -4868,7 +4868,7 @@ void VisualizePBox(const vector<cv::Mat>& images, const Blob<Dtype>* detections,
 			cap_out.write(image);
 		}
 		cv::imshow("detections", image);
-		if (cv::waitKey(1) == 27) {
+		if (cv::waitKey(1) == 50) {
 			raise(SIGINT);
 		}
 	}

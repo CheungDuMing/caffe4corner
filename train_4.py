@@ -273,8 +273,8 @@ background_label_id=0
 train_on_diff_gt = True
 normalization_mode = P.Loss.VALID
 # code_type = P.PriorPBox.DIAG_CENTER_SIZE_ANGLE
-code_type = P.PriorPBox.TWO_CENTER_SIZE
-# code_type = P.PriorPBox.CORNER
+# code_type = P.PriorPBox.TWO_CENTER_SIZE
+code_type = P.PriorPBox.CORNER
 ignore_cross_boundary_pbox = False
 mining_type = P.MultiPBoxLoss.MAX_NEGATIVE
 neg_pos_ratio = 3.
@@ -401,7 +401,7 @@ det_out_pbox_param = {
     'num_classes': num_classes,
     'share_location': share_location,
     'background_label_id': background_label_id,
-    'nms_param': {'nms_threshold': 0.45, 'top_k': 400},
+    'nms_param': {'nms_threshold': 0.9, 'top_k': 400},
     'save_output_param': {
         'output_directory': output_result_dir,
         'output_name_prefix': "comp4_det_test_",
@@ -418,7 +418,7 @@ det_out_pbox_param = {
 det_pbox_eval_param = {
     'num_classes': num_classes,
     'background_label_id': background_label_id,
-    'overlap_threshold': -0.5,
+    'overlap_threshold': -0.3,
     'evaluate_difficult_gt': False,
     'name_size_file': name_size_file,
     }
